@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecionando...</title>
+    <script>
+      // Single Page Apps fallback for static servers
+      var path = window.location.pathname;
+      var search = window.location.search;
+      var hash = window.location.hash;
+      window.location.replace('/' + (path && path !== '/' ? '?route=' + encodeURIComponent(path) : '') + (search ? '&' + search.slice(1) : '') + hash);
+    </script>
+  </head>
+  <body>
+    <p>Redirecionando para a página principal...</p>
+  </body>
+</html>
