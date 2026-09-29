@@ -1,0 +1,50 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1E1E1E"/>
+      <stop offset="100%" stop-color="#0A0A0A"/>
+    </radialGradient>
+    <radialGradient id="crust" cx="50%" cy="50%" r="50%">
+      <stop offset="70%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#92400E"/>
+    </radialGradient>
+    <radialGradient id="cheese" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="75%" stop-color="#FACC15"/>
+      <stop offset="100%" stop-color="#EAB308"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="50%" stop-color="#D4AF37"/>
+      <stop offset="100%" stop-color="#A16207"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="236" fill="none" stroke="url(#gold)" stroke-width="6"/>
+  <circle cx="256" cy="256" r="226" fill="none" stroke="#E4171E" stroke-width="2" stroke-dasharray="8 6"/>
+
+  <!-- Pizza Base -->
+  <g transform="translate(0, -20)">
+    <circle cx="256" cy="230" r="160" fill="url(#crust)"/>
+    <circle cx="256" cy="230" r="140" fill="url(#cheese)"/>
+    
+    <!-- Pepperonis / Toppings -->
+    <circle cx="200" cy="180" r="28" fill="#DC2626" stroke="#991B1B" stroke-width="4"/>
+    <circle cx="312" cy="180" r="28" fill="#DC2626" stroke="#991B1B" stroke-width="4"/>
+    <circle cx="256" cy="245" r="30" fill="#DC2626" stroke="#991B1B" stroke-width="4"/>
+    <circle cx="190" cy="270" r="26" fill="#DC2626" stroke="#991B1B" stroke-width="4"/>
+    <circle cx="320" cy="270" r="26" fill="#DC2626" stroke="#991B1B" stroke-width="4"/>
+    
+    <!-- Basil leaves -->
+    <path d="M235 150 C215 150, 215 170, 238 165 Z" fill="#16A34A"/>
+    <path d="M280 200 C300 200, 300 180, 277 185 Z" fill="#16A34A"/>
+    <path d="M220 230 C200 235, 205 255, 225 245 Z" fill="#16A34A"/>
+    <path d="M295 240 C315 245, 310 265, 290 255 Z" fill="#16A34A"/>
+  </g>
+
+  <!-- Banner & Wordmark -->
+  <path d="M76 380 Q256 415 436 380 L420 440 Q256 470 92 440 Z" fill="#14532D" stroke="url(#gold)" stroke-width="4"/>
+  <text x="256" y="424" text-anchor="middle" fill="#FFFFFF" font-family="'Oswald', sans-serif" font-weight="bold" font-size="34" letter-spacing="3">LA SOPHIA</text>
+  <text x="256" y="476" text-anchor="middle" fill="#FACC15" font-family="'Poppins', sans-serif" font-weight="700" font-size="16" letter-spacing="4">PIZZARIA &amp; ESFIHARIA</text>
+</svg>

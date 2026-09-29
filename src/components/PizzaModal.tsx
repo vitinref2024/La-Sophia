@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { CrustOption, ExtraToppingOption, PizzaSize, Product } from '../types';
 import { resolveCardImage, getCleanFlavorName } from './ProductCard';
+import { ProductImage } from './ProductImage';
 import {
   CRUST_OPTIONS,
   EXTRA_TOPPING_OPTIONS,
@@ -289,17 +290,14 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
       <div className="relative w-full max-w-2xl max-h-[94dvh] bg-[#FBF9F6] border border-[#E8E0D5] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#1C1C1C] my-auto">
         {/* Header Image */}
         <div className="relative h-36 sm:h-44 md:h-48 w-full bg-[#111111] overflow-hidden shrink-0">
-          <img
-            src={resolveCardImage(product)}
-            alt={getCleanFlavorName(product.name)}
+          <ProductImage
+            product={product}
             className="w-full h-full object-cover object-center"
-            onError={(e) => {
-              const target = e.currentTarget as HTMLImageElement;
-              target.onerror = null;
-              target.src = '/imagens/pizzas/calabresa.png';
-            }}
+            loading="lazy"
+            width={672}
+            height={192}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none" />
 
           {/* Close button */}
           <button
@@ -539,16 +537,15 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
                           <span className="w-5 h-5 rounded-full bg-[#E4171E] text-white flex items-center justify-center font-bold text-[10px] shrink-0">
                             {idx + 1}
                           </span>
-                          {flv.image && (
-                            <img
-                              src={resolveCardImage(flv)}
-                              alt={getCleanFlavorName(flv.name)}
-                              className="w-9 h-9 rounded-lg object-cover object-center border border-[#E8E0D5] shrink-0 bg-[#F0EAE1]"
-                              onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).style.display = 'none';
-                              }}
+                          <div className="w-9 h-9 rounded-lg overflow-hidden border border-[#E8E0D5] shrink-0 bg-[#F0EAE1]">
+                            <ProductImage
+                              product={flv}
+                              className="w-full h-full object-cover object-center"
+                              loading="lazy"
+                              width={36}
+                              height={36}
                             />
-                          )}
+                          </div>
                           <div className="min-w-0 flex-1">
                             <div className="font-bold text-[#1C1C1C] truncate flex items-center gap-1.5 flex-wrap">
                               <span>{flv.name}</span>
@@ -681,17 +678,15 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 pr-2 flex-1">
-                          {flv.image && (
-                            <img
-                              src={resolveCardImage(flv)}
-                              alt={getCleanFlavorName(flv.name)}
-                              className="w-10 h-10 rounded-lg object-cover object-center border border-[#E8E0D5] shrink-0 bg-[#F0EAE1]"
+                          <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#E8E0D5] shrink-0 bg-[#F0EAE1]">
+                            <ProductImage
+                              product={flv}
+                              className="w-full h-full object-cover object-center"
                               loading="lazy"
-                              onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).style.display = 'none';
-                              }}
+                              width={40}
+                              height={40}
                             />
-                          )}
+                          </div>
                           <div className="min-w-0 flex-1">
                             <div className="font-semibold text-[#1C1C1C] truncate flex items-center gap-1.5">
                               {flv.code && (
@@ -895,6 +890,9 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
                           alt={bev.name}
                           className="w-full h-full object-contain"
                           loading="lazy"
+                          decoding="async"
+                          width="48"
+                          height="48"
                           referrerPolicy="no-referrer"
                         />
                       </div>

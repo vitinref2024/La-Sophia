@@ -1,113 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Utensils, Heart, Scale } from 'lucide-react';
+import { Plus, Utensils, Heart, Scale, Camera, RotateCcw } from 'lucide-react';
 import { Product } from '../types';
 import { formatBRL } from '../data/menuData';
-import { safeImageUrl } from '../utils/imageUrl';
-import escarolaImg from '../assets/pizzas/Escarola.png';
-import { getCustomProductImage } from '../utils/photoStorage';
+import {
+  IMAGENS_VERSAO,
+  EXTENSOES_IMAGEM,
+  DEFAULT_FALLBACK_IMAGE,
+  getExactFlavorName,
+  buildProductImageUrl,
+  safeImageUrl,
+} from '../utils/imageUrl';
 
-// Normalização e associação de imagens de pizzas salgadas pelo NOME DO SABOR
-export function normalizeFlavorKey(name: string): string {
-  return (name || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/^\d+\s*-\s*/, '') // Remove o número inicial se houver (ex: "01 - ")
-    .replace(/[^a-z0-9]/g, '');
-}
+export { IMAGENS_VERSAO, EXTENSOES_IMAGEM, DEFAULT_FALLBACK_IMAGE, getExactFlavorName };
 
 export function getCleanFlavorName(name: string): string {
-  return (name || '').replace(/^\d+\s*-\s*/, '').trim();
+  return getExactFlavorName(name);
 }
 
-// Mapeamento direto pelo NOME DO SABOR para os arquivos existentes em /imagens/pizzas/ com ?v=2
-export const PIZZA_FLAVOR_TO_IMAGE: Record<string, string> = {
-  'aespanhola': '/imagens/pizzas/A%20ESPANHOLA.jpg?v=2',
-  'amodacarioca': '/imagens/pizzas/A%20moda%20Carioca.jpg?v=2',
-  'amodapizzaiolo': '/imagens/pizzas/A%20moda%20Pizzaiolo.jpg?v=2',
-  'alema': '/imagens/pizzas/Alem%C3%A3.jpg?v=2',
-  'alho': '/imagens/pizzas/Alho.png?v=2',
-  'aliche': '/imagens/pizzas/Aliche.png?v=2',
-  'aspargofrancesa': '/imagens/pizzas/Aspargo%20Francesa.png?v=2',
-  'bacon': '/imagens/pizzas/Bacon.png?v=2',
-  'baiacatu': '/imagens/pizzas/Baiacatu.png?v=2',
-  'baiana': '/imagens/pizzas/Baiana.png?v=2',
-  'bauru': '/imagens/pizzas/Bauru.png?v=2',
-  'belacatherine': '/imagens/pizzas/Bela%20Catherine.png?v=2',
-  'beringela': '/imagens/pizzas/Beringela.png?v=2',
-  'bolonhesa': '/imagens/pizzas/Bolonhesa.png?v=2',
-  'brancadeneve': '/imagens/pizzas/Branca%20de%20neve.png?v=2',
-  'brocolis': '/imagens/pizzas/Br%C3%B3colis.png?v=2',
-  'calabresa': '/imagens/pizzas/Calabresa.png?v=2',
-  'catupiry': '/imagens/pizzas/Catupiry.png?v=2',
-  'requinte': '/imagens/pizzas/Requinte.png?v=2',
-  'camareis': '/imagens/pizzas/Camareis.png?v=2',
-  'carijo': '/imagens/pizzas/Carij%C3%B3.png?v=2',
-  'cincoqueijos': '/imagens/pizzas/Cinco%20Queijos.png?v=2',
-  'dahora': '/imagens/pizzas/Da%20Hora.png?v=2',
-  'escarola': escarolaImg,
-  'escalora': escarolaImg,
-  'fiorentina': '/imagens/pizzas/Fiorentina.png?v=2',
-  'firmeza': '/imagens/pizzas/Firmeza.png?v=2',
-  'vilafatimai': '/imagens/pizzas/Vila%20F%C3%A1tima%20I.png?v=2',
-  'laglazia': '/imagens/pizzas/La%20Glazia.png?v=2',
-  'lombinho': '/imagens/pizzas/Lombinho.png?v=2',
-  'jardineira': '/imagens/pizzas/Jardineira.png?v=2',
-  'marguerita': '/imagens/pizzas/Marguerita.png?v=2',
-  'milhoverde': '/imagens/pizzas/Milho%20Verde.png?v=2',
-  'modinha': '/imagens/pizzas/Modinha.png?v=2',
-  'mussarela': '/imagens/pizzas/Mussarela.png?v=2',
-  'napolitana': '/imagens/pizzas/Napolitana.png?v=2',
-  'otello': '/imagens/pizzas/Otello.png?v=2',
-  'palma': '/imagens/pizzas/Palma.png?v=2',
-  'palmito': '/imagens/pizzas/Palmito.png?v=2',
-  'portuguesai': '/imagens/pizzas/Portuguesa%20I.png?v=2',
-  'portuguesaii': '/imagens/pizzas/Portuguesa%20II.png?v=2',
-  'primavera': '/imagens/pizzas/Primavera.png?v=2',
-  'provolone': '/imagens/pizzas/Provolone.png?v=2',
-  'quatroestacoes': '/imagens/pizzas/Quatro%20Esta%C3%A7%C3%B5es.png?v=2',
-  'quatroqueijos': '/imagens/pizzas/Quatro%20Queijos.png?v=2',
-  'roys': '/imagens/pizzas/Roys.png?v=2',
-  'sertaneja': '/imagens/pizzas/Sertaneja.png?v=2',
-  'siciliana': '/imagens/pizzas/Siciliana.png?v=2',
-  'tamburello': '/imagens/pizzas/Tamburello.png?v=2',
-  'toscana': '/imagens/pizzas/Toscana.png?v=2',
-  'tropical': '/imagens/pizzas/Tropical.png?v=2',
-  'vegetariana': '/imagens/pizzas/Vegetariana.png?v=2',
-  'vilafatima': '/imagens/pizzas/Vila%20F%C3%A1tima.png?v=2',
-  'ziarita': '/imagens/pizzas/Zia%20Rita.png?v=2',
-};
-
-export function resolveCardImage(product: Product): string {
-  // 1. Prioridade máxima absoluta: imagem personalizada enviada pelo usuário por ID do produto
-  const custom =
-    getCustomProductImage(product.id) ||
-    (product.code === '24' ? getCustomProductImage('pizza-24') : null);
-  if (custom) {
-    return custom;
-  }
-
-  // 2. Garantia direta para o sabor Escarola com import bundled caso não haja customizada
-  if (product.code === '24' || (product.name && product.name.toLowerCase().includes('escarola'))) {
-    return escarolaImg;
-  }
-
-  const isPizzaSalgada = product.category === 'pizzas' || (product.isPizza && !product.isSweetPizza && product.category !== 'pizzas-doces');
-
-  // 3. Para pizzas salgadas: correspondência pelo NOME DO SABOR (ignorando maiúsculas/minúsculas, acentos e espaços)
-  if (isPizzaSalgada && product.name) {
-    const key = normalizeFlavorKey(product.name);
-    if (PIZZA_FLAVOR_TO_IMAGE[key]) {
-      return safeImageUrl(PIZZA_FLAVOR_TO_IMAGE[key]);
+/**
+ * Resolução da imagem de um produto para uso fora do card (ex: modais):
+ * Prioridade:
+ * 1. Foto enviada pelo usuário APENAS neste aparelho (localStorage)
+ * 2. Imagem oficial em /images/NOME DO SABOR.ext?v=IMAGENS_VERSAO
+ */
+export function resolveCardImage(product: Product, extIndex = 0): string {
+  try {
+    if (typeof window !== 'undefined') {
+      const local = localStorage.getItem(`local_device_photo_${product.id}`);
+      if (local) return local;
     }
+  } catch {
+    // fallback
   }
 
-  // 4. Resolução direta pela imagem cadastrada no produto
-  if (product.image) {
-    return safeImageUrl(product.image);
-  }
-
-  return '';
+  return buildProductImageUrl(product.name, extIndex);
 }
 
 interface ProductCardProps {
@@ -121,7 +47,7 @@ interface ProductCardProps {
   style?: React.CSSProperties;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCardComponent: React.FC<ProductCardProps> = ({
   product,
   onSelect,
   isCompared = false,
@@ -130,35 +56,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onToggleFavorite,
   style,
 }) => {
-  const [imgError, setImgError] = useState(false);
+  // Índice da extensão atual testada na ordem: .jpg (0), .png (1), .jpeg (2), .webp (3)
+  const [extIndex, setExtIndex] = useState(0);
+  const [failedAll, setFailedAll] = useState(false);
+  const [failedFallback, setFailedFallback] = useState(false);
 
-  const [customPhoto, setCustomPhoto] = useState<string | null>(() => {
-    return getCustomProductImage(product.id) || (product.code === '24' ? getCustomProductImage('pizza-24') : null);
+  // Foto enviada pelo botão de subir imagem (válida APENAS neste aparelho)
+  const [localPhoto, setLocalPhoto] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(`local_device_photo_${product.id}`) || null;
+    } catch {
+      return null;
+    }
   });
 
-  // Atualização em tempo real quando qualquer foto for salva ou importada
+  // Reseta estado quando o produto mudar
   useEffect(() => {
-    const handleUpdate = (e: Event) => {
-      const customEvt = e as CustomEvent<{ id?: string; dataUrl?: string | null; all?: boolean }>;
-      if (
-        customEvt.detail?.all ||
-        customEvt.detail?.id === product.id ||
-        (product.code === '24' && customEvt.detail?.id === 'pizza-24')
-      ) {
-        const updated =
-          getCustomProductImage(product.id) ||
-          (product.code === '24' ? getCustomProductImage('pizza-24') : null);
-        setCustomPhoto(updated);
-        setImgError(false);
-      }
-    };
-    window.addEventListener('custom-product-image-updated', handleUpdate);
-    return () => {
-      window.removeEventListener('custom-product-image-updated', handleUpdate);
-    };
-  }, [product.id, product.code]);
-
-  const imageSrc = customPhoto || resolveCardImage(product);
+    setExtIndex(0);
+    setFailedAll(false);
+    setFailedFallback(false);
+    try {
+      setLocalPhoto(localStorage.getItem(`local_device_photo_${product.id}`) || null);
+    } catch {
+      setLocalPhoto(null);
+    }
+  }, [product.id, product.name]);
 
   const isPizza = product.isPizza || product.isSweetPizza;
   const isEsfiha = product.isEsfiha;
@@ -171,6 +93,53 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     return 'Adicionar';
   };
 
+  // Trata erro ao carregar imagem: tenta a próxima extensão na ordem .jpg, .png, .jpeg, .webp
+  const handleImageError = () => {
+    if (localPhoto) {
+      setLocalPhoto(null);
+      setExtIndex(0);
+      return;
+    }
+
+    if (extIndex < EXTENSOES_IMAGEM.length - 1) {
+      setExtIndex((prev) => prev + 1);
+    } else {
+      setFailedAll(true);
+    }
+  };
+
+  // Upload de foto pelo usuário (salva somente neste aparelho)
+  const handleUploadLocalPhoto = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        try {
+          localStorage.setItem(`local_device_photo_${product.id}`, dataUrl);
+        } catch (err) {
+          console.warn('Aviso ao salvar foto local no aparelho:', err);
+        }
+        setLocalPhoto(dataUrl);
+        setFailedAll(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Remove a foto local deste aparelho e volta a usar /images/
+  const handleRemoveLocalPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      localStorage.removeItem(`local_device_photo_${product.id}`);
+    } catch {}
+    setLocalPhoto(null);
+    setExtIndex(0);
+    setFailedAll(false);
+  };
+
+  // Determina a URL atual da imagem
+  const currentImageSrc = localPhoto || buildProductImageUrl(product.name, extIndex);
+
   return (
     <div
       style={style}
@@ -181,21 +150,36 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       }`}
       onClick={() => onSelect(product)}
     >
-      {/* 1. Imagem do produto: Obtida de foto personalizada ou foto real do cardápio */}
+      {/* 1. Imagem do produto: carregada da pasta /images/ com ordem de extensão ou fallback */}
       <div className={`relative w-full aspect-[16/9] overflow-hidden rounded-t-xl shrink-0 flex items-center justify-center ${
         isBeverage ? 'bg-white' : 'bg-[#F0EAE1]'
       }`}>
-        {!imgError ? (
+        {!failedAll ? (
           <img
-            src={imageSrc}
+            key={`${product.id}_${extIndex}_${localPhoto ? 'local' : 'folder'}`}
+            src={currentImageSrc}
             alt={getCleanFlavorName(product.name)}
-            onError={() => {
-              setImgError(true);
-            }}
+            onError={handleImageError}
             className={`w-full h-full group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none ${
               isBeverage ? 'object-contain p-2' : 'object-cover object-center'
             }`}
             loading="lazy"
+            decoding="async"
+            width="400"
+            height="225"
+          />
+        ) : !failedFallback ? (
+          <img
+            src={isBeverage && product.image ? safeImageUrl(product.image) : DEFAULT_FALLBACK_IMAGE}
+            alt={getCleanFlavorName(product.name)}
+            onError={() => setFailedFallback(true)}
+            className={`w-full h-full group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none ${
+              isBeverage ? 'object-contain p-2' : 'object-cover object-center'
+            }`}
+            loading="lazy"
+            decoding="async"
+            width="400"
+            height="225"
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-center p-2 bg-[#F0EAE1] text-[#8C827A]">
@@ -211,12 +195,48 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </span>
         )}
 
-        {/* Tag especial / destaque no canto superior direito se houver */}
-        {product.tag && (
-          <span className="absolute top-3 right-3 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-black/80 text-white border border-white/20 backdrop-blur-xs shadow-md z-10">
-            {product.tag}
-          </span>
-        )}
+        {/* 3. Ações no canto superior direito: Tag de destaque + Botão de Subir Imagem (neste aparelho) */}
+        <div
+          className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {product.tag && (
+            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-black/80 text-white border border-white/20 backdrop-blur-xs shadow-md">
+              {product.tag}
+            </span>
+          )}
+
+          {localPhoto && (
+            <button
+              type="button"
+              onClick={handleRemoveLocalPhoto}
+              className="p-1.5 rounded-lg bg-black/70 hover:bg-red-700 text-white text-xs shadow-md transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+              title="Restaurar foto padrão de /images/"
+              aria-label="Restaurar foto padrão"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          <label
+            className="p-2 rounded-lg bg-black/60 hover:bg-black/85 text-white text-xs shadow-md backdrop-blur-xs transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+            title="Subir imagem para este item (neste aparelho)"
+            aria-label="Subir imagem para este item"
+          >
+            <Camera className="w-4 h-4" />
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleUploadLocalPhoto(file);
+                }
+              }}
+            />
+          </label>
+        </div>
 
         {/* Botão de comparar sabor se pizza */}
         {onToggleCompare && isPizza && (
@@ -226,7 +246,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               e.stopPropagation();
               onToggleCompare(product);
             }}
-            className={`absolute bottom-2.5 left-2.5 p-1.5 rounded-lg border text-xs shadow-md backdrop-blur-sm transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center z-10 ${
+            className={`absolute bottom-2.5 left-2.5 p-2 rounded-lg border text-xs shadow-md backdrop-blur-sm transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center z-10 ${
               isCompared
                 ? 'bg-[#E4171E] text-white border-[#E4171E]'
                 : 'bg-black/60 border-neutral-700 text-neutral-200 hover:text-white'
@@ -234,7 +254,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             title="Comparar sabor"
             aria-label="Comparar sabor"
           >
-            <Scale className="w-3.5 h-3.5" />
+            <Scale className="w-4 h-4" />
           </button>
         )}
       </div>
@@ -291,7 +311,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   e.stopPropagation();
                   onToggleFavorite(product);
                 }}
-                className={`min-h-[40px] min-w-[40px] p-2 rounded-xl border text-xs transition-colors cursor-pointer flex items-center justify-center shrink-0 ${
+                className={`min-h-[44px] min-w-[44px] p-2.5 rounded-xl border text-xs transition-colors cursor-pointer flex items-center justify-center shrink-0 ${
                   isFavorite
                     ? 'bg-[#FBE4E1] text-[#E4171E] border-[#E4171E]/40 shadow-xs'
                     : 'bg-[#F0EAE1] border-[#E8E0D5] text-[#6B6B6B] hover:text-[#E4171E] hover:bg-[#FBE4E1]'
@@ -313,7 +333,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 e.stopPropagation();
                 onSelect(product);
               }}
-              className="min-h-[40px] px-3.5 sm:px-4 py-2 rounded-xl bg-[#E4171E] hover:bg-[#B80F16] active:bg-[#B80F16] active:scale-95 text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              className="min-h-[44px] px-3.5 sm:px-4 py-2.5 rounded-xl bg-[#E4171E] hover:bg-[#B80F16] active:bg-[#B80F16] active:scale-95 text-white text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+              aria-label={`${getActionText()} ${product.name}`}
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>{getActionText()}</span>
@@ -324,3 +345,5 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     </div>
   );
 };
+
+export const ProductCard = React.memo(ProductCardComponent);

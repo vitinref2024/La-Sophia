@@ -191,6 +191,12 @@ export const BeveragesUpsellModal: React.FC<BeveragesUpsellModalProps> = ({
                       alt={prod.name}
                       className="w-full h-full object-contain"
                       loading="lazy"
+                      decoding="async"
+                      width="56"
+                      height="56"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      }}
                       referrerPolicy="no-referrer"
                     />
                   </div>

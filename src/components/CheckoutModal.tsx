@@ -30,6 +30,7 @@ import {
 import { CartItem, OrderCustomer, PaymentMethod, PizzeriaInfo, Product } from '../types';
 import { formatBRL, OFFICIAL_PIX_KEY } from '../data/menuData';
 import { safeImageUrl } from '../utils/imageUrl';
+import { ProductImage } from './ProductImage';
 import { generateWhatsAppMessage, openWhatsApp, getNextOrderNumber } from '../utils/whatsapp';
 import { saveRecentOrder } from '../utils/storage';
 import { calculateDrivingDistance, formatDistanceKm, RouteDistanceResult } from '../utils/deliveryDistance';
@@ -670,12 +671,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-14 h-14 rounded-lg overflow-hidden bg-[#F0EAE1] shrink-0 border border-[#E8E0D5]">
-                            <img
-                              src={safeImageUrl(prod.image)}
+                            <ProductImage
+                              product={prod}
                               alt={prod.name}
                               className="w-full h-full object-cover"
                               loading="lazy"
-                              referrerPolicy="no-referrer"
+                              width={56}
+                              height={56}
                             />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -749,6 +751,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <input
                     type="text"
                     required
+                    autoComplete="name"
                     value={customer.name}
                     onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
                     placeholder="Ex: João Silva"
@@ -769,6 +772,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </label>
                   <input
                     type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
                     required
                     value={customer.phone}
                     onChange={handlePhoneChange}
@@ -844,6 +849,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       <div className="relative">
                         <input
                           type="text"
+                          inputMode="numeric"
+                          autoComplete="postal-code"
                           required
                           value={customer.cep || ''}
                           onChange={handleCepChange}
@@ -865,7 +872,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         type="button"
                         onClick={handleCalculateCep}
                         disabled={isCalculatingCep}
-                        className="w-full py-2.5 px-3 rounded-lg bg-white hover:bg-[#F5EFE6] border border-[#E8E0D5] text-[#1C1C1C] font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-98 min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full py-2.5 px-3 rounded-lg bg-white hover:bg-[#F5EFE6] border border-[#E8E0D5] text-[#1C1C1C] font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs active:scale-98 min-h-[44px] disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {isCalculatingCep ? (
                           <>
@@ -916,6 +923,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       </label>
                       <input
                         type="text"
+                        autoComplete="address-line1"
                         required
                         value={customer.street}
                         onChange={(e) => setCustomer({ ...customer, street: e.target.value })}
@@ -934,6 +942,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       </label>
                       <input
                         type="text"
+                        inputMode="numeric"
                         required
                         value={customer.number}
                         onChange={(e) => setCustomer({ ...customer, number: e.target.value })}
@@ -956,6 +965,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       </label>
                       <input
                         type="text"
+                        autoComplete="address-level3"
                         required
                         value={customer.neighborhood}
                         onChange={(e) =>
@@ -976,6 +986,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       </label>
                       <input
                         type="text"
+                        autoComplete="address-line2"
                         value={customer.complement}
                         onChange={(e) =>
                           setCustomer({ ...customer, complement: e.target.value })
@@ -994,6 +1005,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       </label>
                       <input
                         type="text"
+                        autoComplete="address-level2"
                         required
                         value={customer.city || 'Guarulhos'}
                         onChange={(e) => setCustomer({ ...customer, city: e.target.value })}
@@ -1007,6 +1019,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       </label>
                       <input
                         type="text"
+                        autoComplete="address-level1"
                         required
                         value={customer.state || 'SP'}
                         onChange={(e) => setCustomer({ ...customer, state: e.target.value.toUpperCase() })}

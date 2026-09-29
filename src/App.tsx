@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { SearchBar } from './components/SearchBar';
 import { CategoryNav, PrimaryFilter } from './components/CategoryNav';
 import { ProductCard } from './components/ProductCard';
+import { LazyCategorySection } from './components/LazyCategorySection';
 import { PizzaModal, ConfiguredPizzaPayload } from './components/PizzaModal';
 import { BeveragesUpsellModal } from './components/BeveragesUpsellModal';
 import { CartDrawer } from './components/CartDrawer';
@@ -238,10 +239,10 @@ export default function App() {
   };
 
   // Favorite handlers
-  const handleToggleFavorite = (product: Product) => {
+  const handleToggleFavorite = useCallback((product: Product) => {
     const { updatedList } = toggleFavoriteId(product.id);
     setFavoriteIds(updatedList);
-  };
+  }, []);
 
   const favoriteProducts = useMemo(() => {
     return products.filter((p) => favoriteIds.includes(p.id));
@@ -308,11 +309,11 @@ export default function App() {
     return '';
   }, [specialFilter]);
 
-  const handleResetAllFilters = () => {
+  const handleResetAllFilters = useCallback(() => {
     setSearchTerm('');
     setSpecialFilter(null);
     setActiveCategory('todas');
-  };
+  }, []);
 
   // Group filtered products into real category sections based on CATEGORIES
   const categorySections = useMemo(() => {
@@ -460,7 +461,7 @@ export default function App() {
   };
 
   // Compare handlers
-  const handleToggleCompare = (product: Product) => {
+  const handleToggleCompare = useCallback((product: Product) => {
     setComparedProducts((prev) => {
       const exists = prev.some((p) => p.id === product.id);
       let updated: Product[];
@@ -476,7 +477,19 @@ export default function App() {
       setIsCompareOpen(updated.length > 0);
       return updated;
     });
-  };
+  }, []);
+
+  const handleSelectProduct = useCallback((prod: Product) => {
+    if (prod.uninformedPrice) {
+      setUninformedPriceItem(prod);
+      return;
+    }
+    if (prod.isPizza || prod.isSweetPizza) {
+      setSelectedProductForModal(prod);
+    } else {
+      handleAddDirectItem(prod);
+    }
+  }, []);
 
   const handleAssembleHalfHalf = (p1: Product) => {
     setIsCompareOpen(false);
@@ -901,61 +914,22 @@ export default function App() {
           </div>
         ) : categorySections.length > 0 ? (
           <div className="space-y-8 sm:space-y-12">
-            {categorySections.map((section) => (
-              <section
+            {categorySections.map((section, sectionIdx) => (
+              <LazyCategorySection
                 key={section.id}
                 id={section.id}
-                className="scroll-mt-[116px] sm:scroll-mt-[128px]"
-              >
-                {/* Section Title Header: clear visual identity and separation */}
-                <div className="flex items-center justify-between gap-3 mb-3.5 sm:mb-4 pb-2.5 border-b-2 border-[#E4171E]/20">
-                  <div className="flex items-center gap-2 sm:gap-2.5">
-                    <span className="w-1.5 h-5 sm:h-6 rounded-full bg-[#E4171E] shrink-0" />
-                    <h3 className="font-heading text-lg sm:text-2xl font-bold text-[#1C1C1C] uppercase tracking-wide">
-                      {section.label}
-                    </h3>
-                    <span className="text-[11px] font-bold text-[#6B6B6B] bg-white px-2.5 py-0.5 rounded-full border border-[#E8E0D5]">
-                      {section.products.length} {section.products.length === 1 ? 'item' : 'itens'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Products Grid: 1 col mobile, 2 col tablet, 3-4 col desktop */}
-                <div
-                  className={
-                    viewMode === 'compact'
-                      ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5'
-                      : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6'
-                  }
-                >
-                  {section.products.map((product, idx) => {
-                    const isCompared = comparedProducts.some((p) => p.id === product.id);
-                    return (
-                      <ProductCard
-                        key={`${product.id}_${specialFilter || 'todas'}_${searchTerm.trim()}`}
-                        style={{ animationDelay: `${Math.min(idx * 30, 240)}ms` }}
-                        product={product}
-                        viewMode={viewMode}
-                        isCompared={isCompared}
-                        onToggleCompare={handleToggleCompare}
-                        isFavorite={favoriteIds.includes(product.id)}
-                        onToggleFavorite={handleToggleFavorite}
-                        onSelect={(prod) => {
-                          if (prod.uninformedPrice) {
-                            setUninformedPriceItem(prod);
-                            return;
-                          }
-                          if (prod.isPizza || prod.isSweetPizza) {
-                            setSelectedProductForModal(prod);
-                          } else {
-                            handleAddDirectItem(prod);
-                          }
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
+                label={section.label}
+                products={section.products}
+                viewMode={viewMode}
+                comparedProducts={comparedProducts}
+                favoriteIds={favoriteIds}
+                specialFilter={specialFilter}
+                searchTerm={searchTerm}
+                initialRender={sectionIdx < 2}
+                onToggleCompare={handleToggleCompare}
+                onToggleFavorite={handleToggleFavorite}
+                onSelectProduct={handleSelectProduct}
+              />
             ))}
           </div>
         ) : (

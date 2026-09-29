@@ -3,6 +3,7 @@ import { X, Scale, Plus, Check } from 'lucide-react';
 import { Product } from '../types';
 import { formatBRL } from '../data/menuData';
 import { safeImageUrl } from '../utils/imageUrl';
+import { ProductImage } from './ProductImage';
 
 interface CompareDrawerProps {
   isOpen: boolean;
@@ -82,16 +83,15 @@ export const CompareDrawer: React.FC<CompareDrawerProps> = ({
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    {prod.image && (
-                      <img
-                        src={safeImageUrl(prod.image)}
-                        alt={prod.name.replace(/^\d+\s*-\s*/, '').trim()}
-                        className="w-10 h-10 rounded-lg object-cover object-center border border-[#E8E0D5] shrink-0 bg-[#F0EAE1]"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = 'none';
-                        }}
+                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#E8E0D5] shrink-0 bg-[#F0EAE1]">
+                      <ProductImage
+                        product={prod}
+                        className="w-full h-full object-cover object-center"
+                        loading="lazy"
+                        width={40}
+                        height={40}
                       />
-                    )}
+                    </div>
                     <h4 className="font-semibold text-xs sm:text-sm text-[#1C1C1C] [overflow-wrap:anywhere]">
                       {prod.name}
                     </h4>

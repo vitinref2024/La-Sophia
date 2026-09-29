@@ -29,6 +29,10 @@ export const LaSophiaLogoBadge: React.FC<LaSophiaLogoBadgeProps> = ({
             alt={pizzeriaName}
             className="w-full h-full object-cover object-center pointer-events-none select-none"
             loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            width="64"
+            height="64"
             referrerPolicy="no-referrer"
           />
         ) : (

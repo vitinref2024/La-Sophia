@@ -87,11 +87,11 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
         <button
           type="button"
           onClick={onOpenCategoriesSheet}
-          className="min-h-[40px] px-3 py-1.5 rounded-full bg-[#1C1C1C] hover:bg-[#E4171E] active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0"
+          className="min-h-[44px] px-3.5 py-2 rounded-full bg-[#1C1C1C] hover:bg-[#E4171E] active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0"
           title="Ver todas as categorias em lista rápida"
           aria-label="Menu de Categorias"
         >
-          <LayoutGrid className="w-3.5 h-3.5" />
+          <LayoutGrid className="w-4 h-4" />
           <span className="text-[11px] uppercase tracking-wider">Categorias</span>
         </button>
 
@@ -109,7 +109,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
             }}
             type="button"
             onClick={() => onSelectPrimaryFilter('destaques')}
-            className={`min-h-[40px] px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer border shrink-0 [scroll-snap-align:center] flex items-center gap-1.5 ${
+            className={`min-h-[44px] px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer border shrink-0 [scroll-snap-align:center] flex items-center gap-1.5 ${
               primaryFilter === 'destaques'
                 ? 'bg-[#E4171E] text-white border-[#E4171E] shadow-sm font-bold'
                 : 'bg-white text-[#1C1C1C] hover:border-[#E4171E]/40 border-[#E8E0D5]'
@@ -126,7 +126,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
             }}
             type="button"
             onClick={() => onSelectPrimaryFilter('favoritos')}
-            className={`min-h-[40px] px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer border shrink-0 [scroll-snap-align:center] flex items-center gap-1.5 ${
+            className={`min-h-[44px] px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer border shrink-0 [scroll-snap-align:center] flex items-center gap-1.5 ${
               primaryFilter === 'favoritos'
                 ? 'bg-[#E4171E] text-white border-[#E4171E] shadow-sm font-bold'
                 : 'bg-white text-[#1C1C1C] hover:border-[#E4171E]/40 border-[#E8E0D5]'
@@ -160,7 +160,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
                 }}
                 type="button"
                 onClick={() => onSelectCategory(cat.id)}
-                className={`min-h-[40px] px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer border shrink-0 [scroll-snap-align:center] flex items-center gap-1.5 ${
+                className={`min-h-[44px] px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer border shrink-0 [scroll-snap-align:center] flex items-center gap-1.5 ${
                   isActive
                     ? 'bg-[#E4171E] text-white border-[#E4171E] shadow-sm font-bold'
                     : 'bg-white text-[#1C1C1C] hover:border-[#E4171E]/40 border-[#E8E0D5]'

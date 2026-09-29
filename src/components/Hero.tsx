@@ -110,14 +110,18 @@ export const Hero: React.FC<HeroProps> = ({
       {/* Background Image: Authentic pizza in wood-fired oven with embers */}
       <img
         src={pizzeria.heroImage || 'https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=1920&q=85'}
-        alt="Pizza artesanal no forno a lenha"
+        alt="Pizza artesanal no forno a lenha La Sophia"
         className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none brightness-105 contrast-105"
         loading="eager"
+        fetchPriority="high"
+        decoding="async"
+        width="1920"
+        height="1080"
         referrerPolicy="no-referrer"
       />
 
       {/* Light gradient overlay that keeps the pizza image clearly visible while preserving text legibility */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/40 to-[#111111]/90 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/50 to-[#111111]/95 pointer-events-none" />
 
       {/* Central Container: max-width 1200px, 16px/24px/32px padding */}
       <div className="relative z-10 w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 md:py-14 text-center flex flex-col items-center">
@@ -201,7 +205,7 @@ export const Hero: React.FC<HeroProps> = ({
                   key={chip.id}
                   type="button"
                   onClick={chip.action}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 text-white text-xs font-semibold transition-all duration-150 cursor-pointer backdrop-blur-xs min-h-[38px]"
+                  className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 border border-white/15 text-white text-xs font-semibold transition-all duration-150 cursor-pointer backdrop-blur-xs min-h-[44px]"
                 >
                   <Icon className="w-3.5 h-3.5 text-[#E31B23] shrink-0" />
                   <span>{chip.label}</span>
@@ -218,9 +222,15 @@ export const Hero: React.FC<HeroProps> = ({
             <div className="flex items-center gap-3 min-w-0">
               <img
                 src="/imagens/pizzas/Calabresa.png"
-                alt="Pizza Meia-a-Meia Especial"
+                alt="Pizza Meia-a-Meia Especial La Sophia"
                 className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-700/80 shadow-xs"
                 loading="lazy"
+                decoding="async"
+                width="56"
+                height="56"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/imagens/custom/calabresa.png';
+                }}
               />
               <div className="min-w-0">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#E31B23] block leading-none mb-1">

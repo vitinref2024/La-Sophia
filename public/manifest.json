@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "La Sophia Pizzaria e Esfiharia",
+  "short_name": "La Sophia",
+  "description": "Cardápio completo e pedidos online da La Sophia Pizzaria e Esfiharia.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F5EFE6",
+  "theme_color": "#E4171E",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

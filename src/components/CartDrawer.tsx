@@ -3,6 +3,7 @@ import { X, Trash2, Plus, Minus, Edit3, ShoppingBag, ArrowRight, Sparkles, Check
 import { CartItem, Product } from '../types';
 import { formatBRL } from '../data/menuData';
 import { safeImageUrl } from '../utils/imageUrl';
+import { ProductImage } from './ProductImage';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -117,18 +118,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 >
                   <div className="flex items-start justify-between gap-3">
                     {/* Item Thumbnail */}
-                    {item.product.image && (
-                      <div className="w-14 h-14 rounded-lg overflow-hidden border border-[#E8E0D5] bg-[#F0EAE1] shrink-0">
-                        <img
-                          src={safeImageUrl(item.product.image)}
-                          alt={item.product.name.replace(/^\d+\s*-\s*/, '').trim()}
-                          className="w-full h-full object-cover object-center"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    )}
+                    <div className="w-14 h-14 rounded-lg overflow-hidden border border-[#E8E0D5] bg-[#F0EAE1] shrink-0">
+                      <ProductImage
+                        product={item.product}
+                        className="w-full h-full object-cover object-center"
+                        loading="lazy"
+                        width={56}
+                        height={56}
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       {/* Product Header / Title */}
                       {(() => {
@@ -300,12 +298,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         className="bg-white p-2 sm:p-2.5 rounded-lg border border-[#E8E0D5] flex items-center justify-between gap-2.5 shadow-2xs hover:border-[#D8CEBF] transition-all"
                       >
                         <div className="w-10 h-10 rounded-md overflow-hidden bg-[#F0EAE1] shrink-0 border border-[#E8E0D5]">
-                          <img
-                            src={safeImageUrl(prod.image)}
+                          <ProductImage
+                            product={prod}
                             alt={prod.name}
                             className="w-full h-full object-cover"
                             loading="lazy"
-                            referrerPolicy="no-referrer"
+                            width={40}
+                            height={40}
                           />
                         </div>
                         <div className="flex-1 min-w-0">
