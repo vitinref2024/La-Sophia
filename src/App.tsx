@@ -18,16 +18,17 @@ import { RecentOrdersModal } from './components/RecentOrdersModal';
 import { MenuImporterModal } from './components/MenuImporterModal';
 import { MENU_PRODUCTS, PIZZERIA_DEFAULT_INFO, CATEGORIES, calculateMultiFlavorPizzaPrice } from './data/menuData';
 import { CartItem, PizzeriaInfo, Product, RecentOrder } from './types';
-import { LayoutList, LayoutGrid, SearchX, AlertCircle, MessageCircle, Flame, Heart, Clock } from 'lucide-react';
+import { LayoutList, LayoutGrid, SearchX, AlertCircle, MessageCircle, Flame, Heart, Clock, AlertTriangle } from 'lucide-react';
 import { openWhatsApp } from './utils/whatsapp';
 import { getFavoriteIds, toggleFavoriteId, getRecentOrders, clearRecentOrders } from './utils/storage';
 import { searchProducts } from './utils/smartSearch';
 
 const CART_STORAGE_KEY = 'lasophia_cart_v2';
 const SETTINGS_STORAGE_KEY = 'lasophia_settings_v2';
-const PRODUCTS_STORAGE_KEY = 'lasophia_products_v2';
+const PRODUCTS_STORAGE_KEY = 'lasophia_products_v3';
 
 export default function App() {
+
   // Pizzeria settings state
   const [pizzeria, setPizzeria] = useState<PizzeriaInfo>(() => {
     try {
@@ -38,10 +39,24 @@ export default function App() {
           !parsed.address || parsed.address === 'Atendimento Delivery e Balcão'
             ? PIZZERIA_DEFAULT_INFO.address
             : parsed.address;
+        const whatsappNumber =
+          !parsed.whatsappNumber || parsed.whatsappNumber === '5511999999999'
+            ? PIZZERIA_DEFAULT_INFO.whatsappNumber
+            : parsed.whatsappNumber;
+        const displayPhone =
+          !parsed.displayPhone || parsed.displayPhone === '(11) 99999-9999'
+            ? PIZZERIA_DEFAULT_INFO.displayPhone
+            : parsed.displayPhone;
         return {
           ...PIZZERIA_DEFAULT_INFO,
           ...parsed,
-          address,
+          address: PIZZERIA_DEFAULT_INFO.address,
+          neighborhood: PIZZERIA_DEFAULT_INFO.neighborhood,
+          city: PIZZERIA_DEFAULT_INFO.city,
+          state: PIZZERIA_DEFAULT_INFO.state,
+          cep: PIZZERIA_DEFAULT_INFO.cep,
+          whatsappNumber,
+          displayPhone,
           openingHours: PIZZERIA_DEFAULT_INFO.openingHours,
           pixKey: '66708233000151',
         };
@@ -52,25 +67,39 @@ export default function App() {
     return PIZZERIA_DEFAULT_INFO;
   });
 
-  // Dynamic products list state (saved in localStorage)
+  // Master products list: ALWAYS sourced directly from official MENU_PRODUCTS
   const [products, setProducts] = useState<Product[]>(() => {
     try {
-      const saved = localStorage.getItem(PRODUCTS_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 50) return parsed;
-      }
+      // Completely remove all previous product cache keys from localStorage
+      localStorage.removeItem('lasophia_products_v1');
+      localStorage.removeItem('lasophia_products_v2');
+      localStorage.removeItem('lasophia_products_v3');
+      localStorage.removeItem('lasophia_products');
     } catch {
-      // fallback
+      // ignore
     }
     return MENU_PRODUCTS;
   });
 
-  // Cart state
+  // Cart state (synced with official product images on load)
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem(CART_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: CartItem[] = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const officialMap = new Map(MENU_PRODUCTS.map((p) => [p.id, p]));
+          return parsed.map((item) => {
+            const official = officialMap.get(item.product.id);
+            const updatedProd = official && official.image ? { ...item.product, image: official.image } : item.product;
+            const updatedFlavors = item.flavors?.map((flv) => {
+              const offFlv = officialMap.get(flv.id);
+              return offFlv && offFlv.image ? { ...flv, image: offFlv.image } : flv;
+            });
+            return { ...item, product: updatedProd, flavors: updatedFlavors };
+          });
+        }
+      }
     } catch {
       // fallback
     }
@@ -130,22 +159,16 @@ export default function App() {
     }
   }, [cartItems]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
-    } catch (e) {
-      console.warn('Erro ao salvar produtos no localStorage', e);
-    }
-  }, [products]);
-
   // ==================== URL ROUTING & NAVIGATION ====================
   const navigateTo = (path: string, replace = false) => {
     try {
       if (window.location.pathname !== path) {
+        const query = window.location.search || '';
+        const fullTarget = path + query;
         if (replace) {
-          window.history.replaceState(null, '', path);
+          window.history.replaceState(null, '', fullTarget);
         } else {
-          window.history.pushState(null, '', path);
+          window.history.pushState(null, '', fullTarget);
         }
       }
     } catch {
@@ -681,8 +704,19 @@ export default function App() {
         return;
       }
 
-      // Safe fallback for any unrecognized URL: clean up to '/' without error
-      window.history.replaceState(null, '', '/');
+      if (cleanPath === '/' || cleanPath === '') {
+        // Página inicial: preserva query string (?admin=1)
+        setIsCartOpen(false);
+        setIsCheckoutOpen(false);
+        setIsRecentOrdersModalOpen(false);
+        setIsFavoritesModalOpen(false);
+        setIsAdminOpen(false);
+        return;
+      }
+
+      // Safe fallback for any unrecognized URL: clean up to '/' without error, preservando query string
+      const currentQuery = window.location.search || '';
+      window.history.replaceState(null, '', '/' + currentQuery);
     };
 
     handleRoute(window.location.pathname);
@@ -1035,6 +1069,7 @@ export default function App() {
       {selectedProductForModal && (
         <PizzaModal
           product={selectedProductForModal}
+          allProducts={products}
           onClose={() => setSelectedProductForModal(null)}
           onAddToCart={handleAddPizzaToCart}
         />

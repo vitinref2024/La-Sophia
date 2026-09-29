@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { CrustOption, ExtraToppingOption, PizzaSize, Product } from '../types';
+import { resolveCardImage, getCleanFlavorName } from './ProductCard';
 import {
   CRUST_OPTIONS,
   EXTRA_TOPPING_OPTIONS,
@@ -23,6 +24,7 @@ import {
   getHighestPricedFlavor,
   formatBRL,
 } from '../data/menuData';
+import { safeImageUrl } from '../utils/imageUrl';
 
 export interface ConfiguredPizzaPayload {
   product: Product;
@@ -41,6 +43,7 @@ export interface ConfiguredPizzaPayload {
 interface PizzaModalProps {
   product: Product;
   onClose: () => void;
+  allProducts?: Product[];
   onAddToCart: (
     configuredItem: ConfiguredPizzaPayload,
     selectedBeverages?: Array<{ product: Product; quantity: number }>
@@ -50,9 +53,11 @@ interface PizzaModalProps {
 export const PizzaModal: React.FC<PizzaModalProps> = ({
   product,
   onClose,
+  allProducts,
   onAddToCart,
 }) => {
   const isPizza = product.isPizza || product.isSweetPizza;
+  const productSource = allProducts && allProducts.length > 50 ? allProducts : MENU_PRODUCTS;
 
   // Selected customization states
   // Default is 'pizza' (Pizza Grande Tradicional 8 fatias)
@@ -79,12 +84,12 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
 
   // List of beverages from the pizzeria menu
   const availableBeverages = useMemo(() => {
-    return MENU_PRODUCTS.filter((p) => p.category === 'bebidas' || p.category === 'cervejas');
-  }, []);
+    return productSource.filter((p) => p.category === 'bebidas' || p.category === 'cervejas');
+  }, [productSource]);
 
   // Available pizzas for additional flavors (matching savory vs sweet)
   const availableFlavorsList = useMemo(() => {
-    return MENU_PRODUCTS.filter((p) => {
+    return productSource.filter((p) => {
       if (product.isSweetPizza) return p.isSweetPizza;
       return p.isPizza && !p.isSweetPizza;
     }).filter((p) => {
@@ -96,7 +101,7 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
         (p.code && p.code.includes(term))
       );
     });
-  }, [product, flavorSearch]);
+  }, [productSource, product, flavorSearch]);
 
   // Highest priced flavor among the selected ones
   const highestPricedFlavorInfo = useMemo(() => {
@@ -285,10 +290,14 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
         {/* Header Image */}
         <div className="relative h-36 sm:h-44 md:h-48 w-full bg-[#111111] overflow-hidden shrink-0">
           <img
-            src={product.image}
-            alt={product.name}
+            src={resolveCardImage(product)}
+            alt={getCleanFlavorName(product.name)}
             className="w-full h-full object-cover object-center"
-            referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              target.onerror = null;
+              target.src = '/imagens/pizzas/calabresa.png';
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
 
@@ -526,10 +535,20 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
                             : 'bg-[#FBF9F6] border-[#E8E0D5]'
                         }`}
                       >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <span className="w-5 h-5 rounded-full bg-[#E4171E] text-white flex items-center justify-center font-bold text-[10px] shrink-0">
                             {idx + 1}
                           </span>
+                          {flv.image && (
+                            <img
+                              src={resolveCardImage(flv)}
+                              alt={getCleanFlavorName(flv.name)}
+                              className="w-9 h-9 rounded-lg object-cover object-center border border-[#E8E0D5] shrink-0 bg-[#F0EAE1]"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          )}
                           <div className="min-w-0 flex-1">
                             <div className="font-bold text-[#1C1C1C] truncate flex items-center gap-1.5 flex-wrap">
                               <span>{flv.name}</span>
@@ -653,7 +672,7 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
                         key={flv.id}
                         type="button"
                         onClick={() => handleSelectFlavor(flv)}
-                        className={`w-full p-2.5 rounded-lg border text-left transition-colors flex items-center justify-between text-xs cursor-pointer ${
+                        className={`w-full p-2 rounded-lg border text-left transition-colors flex items-center justify-between text-xs cursor-pointer ${
                           isSelected
                             ? 'border-[#E4171E] bg-[#FBE4E1] text-[#1C1C1C] ring-1 ring-[#E4171E]'
                             : isAtMax
@@ -661,17 +680,30 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
                             : 'border-[#E8E0D5] bg-[#FBF9F6] hover:bg-white text-[#1C1C1C]'
                         }`}
                       >
-                        <div className="min-w-0 pr-2 flex-1">
-                          <div className="font-semibold text-[#1C1C1C] truncate flex items-center gap-1.5">
-                            {flv.code && (
-                              <span className="text-[10px] font-mono font-bold text-[#E4171E]">
-                                #{flv.code}
-                              </span>
-                            )}
-                            <span className="truncate">{flv.name}</span>
-                          </div>
-                          <div className="text-[11px] text-[#6B6B6B] truncate">
-                            {flv.description}
+                        <div className="flex items-center gap-2.5 min-w-0 pr-2 flex-1">
+                          {flv.image && (
+                            <img
+                              src={resolveCardImage(flv)}
+                              alt={getCleanFlavorName(flv.name)}
+                              className="w-10 h-10 rounded-lg object-cover object-center border border-[#E8E0D5] shrink-0 bg-[#F0EAE1]"
+                              loading="lazy"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-[#1C1C1C] truncate flex items-center gap-1.5">
+                              {flv.code && (
+                                <span className="text-[10px] font-mono font-bold text-[#E4171E]">
+                                  #{flv.code}
+                                </span>
+                              )}
+                              <span className="truncate">{flv.name}</span>
+                            </div>
+                            <div className="text-[11px] text-[#6B6B6B] truncate">
+                              {flv.description}
+                            </div>
                           </div>
                         </div>
 
@@ -857,11 +889,11 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
                           : 'border-[#E8E0D5] bg-[#FBF9F6] hover:bg-white'
                       }`}
                     >
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-white shrink-0 border border-[#E8E0D5]">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-white shrink-0 border border-[#E8E0D5] flex items-center justify-center p-1">
                         <img
-                          src={bev.image}
+                          src={safeImageUrl(bev.image)}
                           alt={bev.name}
-                          className="w-full h-full object-cover object-center"
+                          className="w-full h-full object-contain"
                           loading="lazy"
                           referrerPolicy="no-referrer"
                         />

@@ -97,6 +97,8 @@ export interface OrderCustomer {
   paymentMethod: PaymentMethod;
   pixReceipt?: PixReceiptData | null;
   deliveryDistanceKm?: number;
+  deliveryFee?: number | null;
+  deliveryFeeText?: string;
   changeFor: string;
   orderNotes: string;
 }

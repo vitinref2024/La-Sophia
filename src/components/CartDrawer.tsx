@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { X, Trash2, Plus, Minus, Edit3, ShoppingBag, ArrowRight, Sparkles, Check } from 'lucide-react';
 import { CartItem, Product } from '../types';
 import { formatBRL } from '../data/menuData';
+import { safeImageUrl } from '../utils/imageUrl';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -34,10 +35,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   allProducts = [],
   onAddComplement,
 }) => {
-  if (!isOpen) return null;
-
-  const finalDeliveryFee = deliveryType === 'entrega' ? deliveryFee : 0;
-  const grandTotal = subtotal + finalDeliveryFee;
+  const grandTotal = subtotal;
 
   const [addedProductIds, setAddedProductIds] = useState<string[]>([]);
 
@@ -52,6 +50,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     );
     return sweets.slice(0, 4);
   }, [allProducts, items, addedProductIds]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -115,8 +115,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   key={item.cartItemId}
                   className="bg-white border border-[#E8E0D5] rounded-xl p-3.5 flex flex-col justify-between gap-3 shadow-xs hover:border-[#D8CEBF] transition-all"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    {/* Item Thumbnail */}
+                    {item.product.image && (
+                      <div className="w-14 h-14 rounded-lg overflow-hidden border border-[#E8E0D5] bg-[#F0EAE1] shrink-0">
+                        <img
+                          src={safeImageUrl(item.product.image)}
+                          alt={item.product.name.replace(/^\d+\s*-\s*/, '').trim()}
+                          className="w-full h-full object-cover object-center"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
                       {/* Product Header / Title */}
                       {(() => {
                         const flavors = item.flavors && item.flavors.length > 0
@@ -288,7 +301,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       >
                         <div className="w-10 h-10 rounded-md overflow-hidden bg-[#F0EAE1] shrink-0 border border-[#E8E0D5]">
                           <img
-                            src={prod.image}
+                            src={safeImageUrl(prod.image)}
                             alt={prod.name}
                             className="w-full h-full object-cover"
                             loading="lazy"
@@ -347,14 +360,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   <span className="font-mono text-[#1C1C1C] font-semibold">{formatBRL(subtotal)}</span>
                 </div>
                 <div className="flex justify-between items-center text-[#6B6B6B]">
-                  <span>Taxa de Entrega</span>
+                  <span>Tipo de Pedido</span>
                   <span className="text-[11px] font-semibold text-[#1C1C1C]">
-                    {deliveryType === 'entrega' ? 'Calculada por distância' : 'Grátis (Retirada)'}
+                    {deliveryType === 'entrega' ? 'Entrega em Domicílio' : 'Retirada no Balcão'}
                   </span>
                 </div>
                 {deliveryType === 'entrega' && (
                   <p className="text-[10px] text-[#888888] italic">
-                    Calculada automaticamente no checkout conforme o endereço.
+                    A taxa de entrega oficial é calculada automaticamente no checkout com base na distância do Google Maps.
                   </p>
                 )}
                 <div className="flex justify-between text-base font-bold text-[#1C1C1C] pt-2 border-t border-[#E8E0D5]">

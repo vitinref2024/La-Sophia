@@ -16,8 +16,6 @@ export const MenuImporterModal: React.FC<MenuImporterModalProps> = ({
   products,
   onSaveProducts,
 }) => {
-  if (!isOpen) return null;
-
   const [activeTab, setActiveTab] = useState<'text' | 'visual'>('visual');
   const [rawText, setRawText] = useState('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -60,8 +58,8 @@ export const MenuImporterModal: React.FC<MenuImporterModalProps> = ({
           }
         : undefined,
       image: isPizza
-        ? 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=800&auto=format&fit=crop'
-        : 'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800&auto=format&fit=crop',
+        ? '/imagens/pizzas/Calabresa.png'
+        : '/imagens/pizzas/Calabresa.png',
       isPizza,
       isEsfiha,
       isSweetPizza: newProdCategory === 'pizzas-doces',
@@ -81,6 +79,8 @@ export const MenuImporterModal: React.FC<MenuImporterModalProps> = ({
       onSaveProducts(products.filter((p) => p.id !== productId));
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn overflow-y-auto">

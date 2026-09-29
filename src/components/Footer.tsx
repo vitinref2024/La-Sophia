@@ -84,7 +84,9 @@ export const Footer: React.FC<FooterProps> = ({ pizzeria }) => {
             <div className="space-y-2 text-xs">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-[#E4171E] shrink-0 mt-0.5" />
-                <span className="[overflow-wrap:anywhere]">{pizzeria.address}</span>
+                <span className="[overflow-wrap:anywhere]">
+                  {pizzeria.address} - {pizzeria.neighborhood || 'Vila Fátima'}, {pizzeria.city || 'Guarulhos'} - {pizzeria.state || 'SP'}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[#E4171E] shrink-0" />

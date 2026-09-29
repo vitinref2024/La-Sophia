@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Plus, Minus, ArrowRight, Sparkles, Check, Beer, Coffee, Utensils } from 'lucide-react';
 import { Product } from '../types';
 import { formatBRL } from '../data/menuData';
+import { safeImageUrl } from '../utils/imageUrl';
 
 interface BeveragesUpsellModalProps {
   isOpen: boolean;
@@ -42,8 +43,6 @@ export const BeveragesUpsellModal: React.FC<BeveragesUpsellModalProps> = ({
     if (activeTab === 'cervejas') return beers;
     return sweetsAndEsfihas;
   }, [activeTab, beverages, beers, sweetsAndEsfihas]);
-
-  if (!isOpen) return null;
 
   // Handler to increment item
   const handleIncrement = (product: Product) => {
@@ -91,6 +90,8 @@ export const BeveragesUpsellModal: React.FC<BeveragesUpsellModalProps> = ({
     setSelectedQuantities({});
     onSkip();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn overflow-y-auto">
@@ -184,11 +185,11 @@ export const BeveragesUpsellModal: React.FC<BeveragesUpsellModalProps> = ({
                   }`}
                 >
                   {/* Thumbnail */}
-                  <div className="w-14 h-14 rounded-lg overflow-hidden bg-[#F0EAE1] shrink-0 border border-[#E8E0D5]">
+                  <div className="w-14 h-14 rounded-lg overflow-hidden bg-white shrink-0 border border-[#E8E0D5] flex items-center justify-center p-1">
                     <img
-                      src={prod.image}
+                      src={safeImageUrl(prod.image)}
                       alt={prod.name}
-                      className="w-full h-full object-cover object-center"
+                      className="w-full h-full object-contain"
                       loading="lazy"
                       referrerPolicy="no-referrer"
                     />

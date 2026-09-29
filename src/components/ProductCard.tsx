@@ -1,7 +1,114 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Utensils, Heart, Scale } from 'lucide-react';
 import { Product } from '../types';
 import { formatBRL } from '../data/menuData';
+import { safeImageUrl } from '../utils/imageUrl';
+import escarolaImg from '../assets/pizzas/Escarola.png';
+import { getCustomProductImage } from '../utils/photoStorage';
+
+// Normalização e associação de imagens de pizzas salgadas pelo NOME DO SABOR
+export function normalizeFlavorKey(name: string): string {
+  return (name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/^\d+\s*-\s*/, '') // Remove o número inicial se houver (ex: "01 - ")
+    .replace(/[^a-z0-9]/g, '');
+}
+
+export function getCleanFlavorName(name: string): string {
+  return (name || '').replace(/^\d+\s*-\s*/, '').trim();
+}
+
+// Mapeamento direto pelo NOME DO SABOR para os arquivos existentes em /imagens/pizzas/ com ?v=2
+export const PIZZA_FLAVOR_TO_IMAGE: Record<string, string> = {
+  'aespanhola': '/imagens/pizzas/A%20ESPANHOLA.jpg?v=2',
+  'amodacarioca': '/imagens/pizzas/A%20moda%20Carioca.jpg?v=2',
+  'amodapizzaiolo': '/imagens/pizzas/A%20moda%20Pizzaiolo.jpg?v=2',
+  'alema': '/imagens/pizzas/Alem%C3%A3.jpg?v=2',
+  'alho': '/imagens/pizzas/Alho.png?v=2',
+  'aliche': '/imagens/pizzas/Aliche.png?v=2',
+  'aspargofrancesa': '/imagens/pizzas/Aspargo%20Francesa.png?v=2',
+  'bacon': '/imagens/pizzas/Bacon.png?v=2',
+  'baiacatu': '/imagens/pizzas/Baiacatu.png?v=2',
+  'baiana': '/imagens/pizzas/Baiana.png?v=2',
+  'bauru': '/imagens/pizzas/Bauru.png?v=2',
+  'belacatherine': '/imagens/pizzas/Bela%20Catherine.png?v=2',
+  'beringela': '/imagens/pizzas/Beringela.png?v=2',
+  'bolonhesa': '/imagens/pizzas/Bolonhesa.png?v=2',
+  'brancadeneve': '/imagens/pizzas/Branca%20de%20neve.png?v=2',
+  'brocolis': '/imagens/pizzas/Br%C3%B3colis.png?v=2',
+  'calabresa': '/imagens/pizzas/Calabresa.png?v=2',
+  'catupiry': '/imagens/pizzas/Catupiry.png?v=2',
+  'requinte': '/imagens/pizzas/Requinte.png?v=2',
+  'camareis': '/imagens/pizzas/Camareis.png?v=2',
+  'carijo': '/imagens/pizzas/Carij%C3%B3.png?v=2',
+  'cincoqueijos': '/imagens/pizzas/Cinco%20Queijos.png?v=2',
+  'dahora': '/imagens/pizzas/Da%20Hora.png?v=2',
+  'escarola': escarolaImg,
+  'escalora': escarolaImg,
+  'fiorentina': '/imagens/pizzas/Fiorentina.png?v=2',
+  'firmeza': '/imagens/pizzas/Firmeza.png?v=2',
+  'vilafatimai': '/imagens/pizzas/Vila%20F%C3%A1tima%20I.png?v=2',
+  'laglazia': '/imagens/pizzas/La%20Glazia.png?v=2',
+  'lombinho': '/imagens/pizzas/Lombinho.png?v=2',
+  'jardineira': '/imagens/pizzas/Jardineira.png?v=2',
+  'marguerita': '/imagens/pizzas/Marguerita.png?v=2',
+  'milhoverde': '/imagens/pizzas/Milho%20Verde.png?v=2',
+  'modinha': '/imagens/pizzas/Modinha.png?v=2',
+  'mussarela': '/imagens/pizzas/Mussarela.png?v=2',
+  'napolitana': '/imagens/pizzas/Napolitana.png?v=2',
+  'otello': '/imagens/pizzas/Otello.png?v=2',
+  'palma': '/imagens/pizzas/Palma.png?v=2',
+  'palmito': '/imagens/pizzas/Palmito.png?v=2',
+  'portuguesai': '/imagens/pizzas/Portuguesa%20I.png?v=2',
+  'portuguesaii': '/imagens/pizzas/Portuguesa%20II.png?v=2',
+  'primavera': '/imagens/pizzas/Primavera.png?v=2',
+  'provolone': '/imagens/pizzas/Provolone.png?v=2',
+  'quatroestacoes': '/imagens/pizzas/Quatro%20Esta%C3%A7%C3%B5es.png?v=2',
+  'quatroqueijos': '/imagens/pizzas/Quatro%20Queijos.png?v=2',
+  'roys': '/imagens/pizzas/Roys.png?v=2',
+  'sertaneja': '/imagens/pizzas/Sertaneja.png?v=2',
+  'siciliana': '/imagens/pizzas/Siciliana.png?v=2',
+  'tamburello': '/imagens/pizzas/Tamburello.png?v=2',
+  'toscana': '/imagens/pizzas/Toscana.png?v=2',
+  'tropical': '/imagens/pizzas/Tropical.png?v=2',
+  'vegetariana': '/imagens/pizzas/Vegetariana.png?v=2',
+  'vilafatima': '/imagens/pizzas/Vila%20F%C3%A1tima.png?v=2',
+  'ziarita': '/imagens/pizzas/Zia%20Rita.png?v=2',
+};
+
+export function resolveCardImage(product: Product): string {
+  // 1. Prioridade máxima absoluta: imagem personalizada enviada pelo usuário por ID do produto
+  const custom =
+    getCustomProductImage(product.id) ||
+    (product.code === '24' ? getCustomProductImage('pizza-24') : null);
+  if (custom) {
+    return custom;
+  }
+
+  // 2. Garantia direta para o sabor Escarola com import bundled caso não haja customizada
+  if (product.code === '24' || (product.name && product.name.toLowerCase().includes('escarola'))) {
+    return escarolaImg;
+  }
+
+  const isPizzaSalgada = product.category === 'pizzas' || (product.isPizza && !product.isSweetPizza && product.category !== 'pizzas-doces');
+
+  // 3. Para pizzas salgadas: correspondência pelo NOME DO SABOR (ignorando maiúsculas/minúsculas, acentos e espaços)
+  if (isPizzaSalgada && product.name) {
+    const key = normalizeFlavorKey(product.name);
+    if (PIZZA_FLAVOR_TO_IMAGE[key]) {
+      return safeImageUrl(PIZZA_FLAVOR_TO_IMAGE[key]);
+    }
+  }
+
+  // 4. Resolução direta pela imagem cadastrada no produto
+  if (product.image) {
+    return safeImageUrl(product.image);
+  }
+
+  return '';
+}
 
 interface ProductCardProps {
   product: Product;
@@ -25,8 +132,37 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const [imgError, setImgError] = useState(false);
 
+  const [customPhoto, setCustomPhoto] = useState<string | null>(() => {
+    return getCustomProductImage(product.id) || (product.code === '24' ? getCustomProductImage('pizza-24') : null);
+  });
+
+  // Atualização em tempo real quando qualquer foto for salva ou importada
+  useEffect(() => {
+    const handleUpdate = (e: Event) => {
+      const customEvt = e as CustomEvent<{ id?: string; dataUrl?: string | null; all?: boolean }>;
+      if (
+        customEvt.detail?.all ||
+        customEvt.detail?.id === product.id ||
+        (product.code === '24' && customEvt.detail?.id === 'pizza-24')
+      ) {
+        const updated =
+          getCustomProductImage(product.id) ||
+          (product.code === '24' ? getCustomProductImage('pizza-24') : null);
+        setCustomPhoto(updated);
+        setImgError(false);
+      }
+    };
+    window.addEventListener('custom-product-image-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('custom-product-image-updated', handleUpdate);
+    };
+  }, [product.id, product.code]);
+
+  const imageSrc = customPhoto || resolveCardImage(product);
+
   const isPizza = product.isPizza || product.isSweetPizza;
   const isEsfiha = product.isEsfiha;
+  const isBeverage = product.category === 'bebidas' || product.category === 'cervejas';
 
   const getActionText = () => {
     if (product.uninformedPrice) return 'Consultar';
@@ -45,24 +181,30 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       }`}
       onClick={() => onSelect(product)}
     >
-      {/* 1. Imagem do produto: Full-width, formato 16:9, object-fit: cover, arredondada apenas no topo */}
-      <div className="relative w-full aspect-[16/9] overflow-hidden rounded-t-xl bg-[#F0EAE1] shrink-0">
+      {/* 1. Imagem do produto: Obtida de foto personalizada ou foto real do cardápio */}
+      <div className={`relative w-full aspect-[16/9] overflow-hidden rounded-t-xl shrink-0 flex items-center justify-center ${
+        isBeverage ? 'bg-white' : 'bg-[#F0EAE1]'
+      }`}>
         {!imgError ? (
           <img
-            src={product.image}
-            alt={product.name}
-            onError={() => setImgError(true)}
-            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none"
+            src={imageSrc}
+            alt={getCleanFlavorName(product.name)}
+            onError={() => {
+              setImgError(true);
+            }}
+            className={`w-full h-full group-hover:scale-105 transition-transform duration-300 pointer-events-none select-none ${
+              isBeverage ? 'object-contain p-2' : 'object-cover object-center'
+            }`}
             loading="lazy"
-            referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-[#6B6B6B]">
-            <Utensils className="w-8 h-8 text-[#E4171E]" />
+          <div className="w-full h-full flex flex-col items-center justify-center text-center p-2 bg-[#F0EAE1] text-[#8C827A]">
+            <Utensils className="w-6 h-6 text-[#A89F95] mb-1" />
+            <span className="text-[11px] font-medium text-[#736B63]">{getCleanFlavorName(product.name)}</span>
           </div>
         )}
 
-        {/* 2. Tag do número do produto (ex: "Nº 14") sobreposta no canto superior esquerdo com fundo vermelho sólido e texto branco */}
+        {/* 2. Tag do número do produto (ex: "Nº 14") sobreposta no canto superior esquerdo */}
         {product.code && (
           <span className="absolute top-3 left-3 text-[11px] sm:text-xs font-mono font-bold px-2.5 py-1 rounded bg-[#E4171E] text-white shadow-md z-10 tracking-tight">
             Nº {product.code}

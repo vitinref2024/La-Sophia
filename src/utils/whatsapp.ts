@@ -1,5 +1,6 @@
 import { CartItem, OrderCustomer, PizzeriaInfo } from '../types';
 import { formatBRL } from '../data/menuData';
+import { calculateDeliveryFee } from './deliveryFee';
 
 /**
  * Generate a clean sequential order number (e.g. 1021, 1022, 1023...)
@@ -125,47 +126,74 @@ export function generateWhatsAppMessage(
   sections.push(`PEDIDO\n\n${itemsFormatted.join('\n\n')}`);
 
   // 4. VALORES
-  const feeLabel = deliveryFee > 0
-    ? (customer.deliveryDistanceKm ? `${formatBRL(deliveryFee)} (Distância: ${customer.deliveryDistanceKm} km)` : formatBRL(deliveryFee))
-    : (customer.deliveryType === 'retirada' ? 'R$ 0,00 (Retirada no Balcão)' : 'R$ 0,00');
+  const feeCalculation = customer.deliveryType === 'entrega' && typeof customer.deliveryDistanceKm === 'number'
+    ? calculateDeliveryFee(customer.deliveryDistanceKm)
+    : null;
 
   const valuesLines: string[] = [
     separator,
-    `SUBTOTAL: ${formatBRL(subtotal)}`,
-    `TAXA DE ENTREGA: ${feeLabel}`,
-    '',
-    `TOTAL DO PEDIDO: ${formatBRL(total)}`,
-    separator,
+    `Subtotal: ${formatBRL(subtotal)}`,
   ];
+
+  if (customer.deliveryType === 'entrega') {
+    if (feeCalculation?.isAboveLimit) {
+      valuesLines.push('Taxa de entrega: Consulte a taxa de entrega');
+      valuesLines.push('');
+      valuesLines.push(`TOTAL: ${formatBRL(subtotal)} (+ taxa de entrega)`);
+    } else if (feeCalculation && feeCalculation.fee !== null) {
+      valuesLines.push(`Taxa de entrega: ${feeCalculation.formattedFee}`);
+      valuesLines.push('');
+      valuesLines.push(`TOTAL: ${formatBRL(subtotal + feeCalculation.fee)}`);
+    } else if (deliveryFee > 0) {
+      valuesLines.push(`Taxa de entrega: ${formatBRL(deliveryFee)}`);
+      valuesLines.push('');
+      valuesLines.push(`TOTAL: ${formatBRL(subtotal + deliveryFee)}`);
+    } else {
+      valuesLines.push('Taxa de entrega: A consultar com a pizzaria');
+      valuesLines.push('');
+      valuesLines.push(`TOTAL: ${formatBRL(total)}`);
+    }
+  } else {
+    valuesLines.push('Taxa de entrega: R$ 0,00 (Retirada no Balcão)');
+    valuesLines.push('');
+    valuesLines.push(`TOTAL: ${formatBRL(subtotal)}`);
+  }
+  valuesLines.push(separator);
   sections.push(valuesLines.join('\n'));
 
   // 5. ENTREGA
   if (customer.deliveryType === 'entrega') {
     const deliveryLines = [
-      'ENTREGA',
+      '📍 ENDEREÇO DE ENTREGA',
       '',
-      `Endereço: ${customer.street}, ${customer.number}`,
+      `CEP: ${customer.cep ? customer.cep.trim() : 'Não informado'}`,
+      `Rua: ${customer.street}`,
+      `Número: ${customer.number}`,
     ];
     if (customer.complement && customer.complement.trim()) {
       deliveryLines.push(`Complemento: ${customer.complement.trim()}`);
     }
     deliveryLines.push(`Bairro: ${customer.neighborhood}`);
-    if (customer.city || customer.state) {
-      deliveryLines.push(`Cidade: ${customer.city || 'São Paulo'}/${customer.state || 'SP'}`);
-    }
-    if (customer.cep && customer.cep.trim()) {
-      deliveryLines.push(`CEP: ${customer.cep.trim()}`);
-    }
-    if (customer.deliveryDistanceKm !== undefined && customer.deliveryDistanceKm > 0) {
-      deliveryLines.push(`Distância: ${customer.deliveryDistanceKm} km`);
-      deliveryLines.push(`Taxa de entrega: ${formatBRL(deliveryFee)}`);
+    deliveryLines.push(`Cidade: ${customer.city || 'Guarulhos'} - ${customer.state || 'SP'}`);
+    if (customer.deliveryDistanceKm !== undefined && typeof customer.deliveryDistanceKm === 'number' && !isNaN(customer.deliveryDistanceKm)) {
+      const formattedDistance = customer.deliveryDistanceKm.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      deliveryLines.push(`DISTÂNCIA: ${formattedDistance} km`);
+
+      if (feeCalculation?.isAboveLimit) {
+        deliveryLines.push('TAXA DE ENTREGA: Consulte a taxa de entrega (distância superior a 9 km)');
+      } else if (feeCalculation && feeCalculation.fee !== null) {
+        deliveryLines.push(`TAXA DE ENTREGA: ${feeCalculation.formattedFee}`);
+      }
     }
     if (customer.reference && customer.reference.trim()) {
       deliveryLines.push(`Referência: ${customer.reference.trim()}`);
     }
     sections.push(deliveryLines.join('\n'));
   } else {
-    sections.push(`ENTREGA\n\nTipo: Retirada no Balcão da Pizzaria\nEndereço: ${pizzeria.address}`);
+    sections.push(`ENTREGA\n\nTipo: Retirada no Balcão da Pizzaria\nEndereço: ${pizzeria.address} - ${pizzeria.neighborhood}, ${pizzeria.city} - ${pizzeria.state} (CEP: ${pizzeria.cep})`);
   }
 
   // 6. PAGAMENTO

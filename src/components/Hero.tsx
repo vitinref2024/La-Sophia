@@ -217,7 +217,7 @@ export const Hero: React.FC<HeroProps> = ({
           >
             <div className="flex items-center gap-3 min-w-0">
               <img
-                src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=200&q=80"
+                src="/imagens/pizzas/Calabresa.png"
                 alt="Pizza Meia-a-Meia Especial"
                 className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-700/80 shadow-xs"
                 loading="lazy"

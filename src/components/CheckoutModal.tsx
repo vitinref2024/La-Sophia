@@ -22,13 +22,18 @@ import {
   Bike,
   RefreshCw,
   Sparkles,
-  Plus
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  Route
 } from 'lucide-react';
 import { CartItem, OrderCustomer, PaymentMethod, PizzeriaInfo, Product } from '../types';
 import { formatBRL, OFFICIAL_PIX_KEY } from '../data/menuData';
+import { safeImageUrl } from '../utils/imageUrl';
 import { generateWhatsAppMessage, openWhatsApp, getNextOrderNumber } from '../utils/whatsapp';
 import { saveRecentOrder } from '../utils/storage';
-import { calculateRouteDistance, calculateDeliveryFeeFromDistance } from '../utils/deliveryFee';
+import { calculateDrivingDistance, formatDistanceKm, RouteDistanceResult } from '../utils/deliveryDistance';
+import { calculateDeliveryFee, DeliveryFeeResult } from '../utils/deliveryFee';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -48,15 +53,6 @@ function formatFileSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-interface DistanceState {
-  isCalculating: boolean;
-  distanceKm?: number;
-  fee?: number;
-  isOutOfRange: boolean;
-  error?: string;
-  hasCalculated: boolean;
-}
-
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   isOpen,
   onClose,
@@ -67,8 +63,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   allProducts = [],
   onAddComplement,
 }) => {
-  if (!isOpen) return null;
-
   // State for Sweet Esfihas Upsell during Finalização
   const [addedEsfihaIds, setAddedEsfihaIds] = useState<string[]>([]);
   const [showAllSweets, setShowAllSweets] = useState(false);
@@ -108,7 +102,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     number: '',
     complement: '',
     neighborhood: '',
-    city: 'São Paulo',
+    city: 'Guarulhos',
     state: 'SP',
     reference: '',
     paymentMethod: 'pix',
@@ -126,12 +120,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isCalculatingCep, setIsCalculatingCep] = useState(false);
   const [cepNotice, setCepNotice] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Distance & Delivery Fee State
-  const [distanceState, setDistanceState] = useState<DistanceState>({
-    isCalculating: false,
-    isOutOfRange: false,
-    hasCalculated: false,
-  });
+  // Google Maps Driving Distance State
+  const [distanceKm, setDistanceKm] = useState<number | null>(null);
+  const [formattedDistanceKm, setFormattedDistanceKm] = useState<string | null>(null);
+  const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
+  const [distanceError, setDistanceError] = useState<string | null>(null);
+  const [foundAddress, setFoundAddress] = useState<string | null>(null);
+  const [isAddressConfirmed, setIsAddressConfirmed] = useState(true);
+  const [distanceDetails, setDistanceDetails] = useState<RouteDistanceResult | null>(null);
+  const [showDevDetails, setShowDevDetails] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSuccess, setIsSuccess] = useState(false);
@@ -321,75 +318,67 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   };
 
-  // 4, 6, 8, 9 — CÁLCULO AUTOMÁTICO DA DISTÂNCIA E TAXA EM TEMPO REAL
-  // Recalcula automaticamente sempre que o cliente alterar CEP, Rua, Número, Bairro ou Cidade
+  // Cálculo da distância rodoviária oficial pelo Google Maps (Pizzaria como origem fixa)
   const recalculateDistance = useCallback(async () => {
     if (customer.deliveryType !== 'entrega') {
-      setDistanceState({
-        isCalculating: false,
-        isOutOfRange: false,
-        hasCalculated: false,
-      });
+      setDistanceKm(null);
+      setFormattedDistanceKm(null);
+      setDistanceError(null);
+      setFoundAddress(null);
+      setDistanceDetails(null);
       return;
     }
 
-    const street = customer.street.trim();
-    const number = customer.number.trim();
-    const city = customer.city?.trim() || 'São Paulo';
-    const state = customer.state?.trim() || 'SP';
-    const neighborhood = customer.neighborhood.trim();
-    const cep = customer.cep?.trim() || '';
+    const street = (customer.street || '').trim();
+    const number = (customer.number || '').trim();
+    const cleanCep = (customer.cep || '').replace(/\D/g, '');
 
-    // Precisa de pelo menos rua e número para traçar rota precisa
-    if (street.length < 3 || number.length < 1) {
-      setDistanceState({
-        isCalculating: false,
-        isOutOfRange: false,
-        hasCalculated: false,
-        distanceKm: undefined,
-        fee: undefined,
-        error: undefined,
-      });
+    // O número do imóvel e CEP com 8 dígitos são obrigatórios para cálculo exato
+    if (street.length < 3 || number.length < 1 || cleanCep.length !== 8) {
+      setDistanceKm(null);
+      setFormattedDistanceKm(null);
+      setDistanceError(null);
+      setFoundAddress(null);
+      setDistanceDetails(null);
       return;
     }
 
-    setDistanceState((prev) => ({
-      ...prev,
-      isCalculating: true,
-      error: undefined,
-    }));
+    setIsCalculatingDistance(true);
+    setDistanceError(null);
 
-    const result = await calculateRouteDistance(pizzeria, {
-      street,
-      number,
-      complement: customer.complement,
-      neighborhood,
-      city,
-      state,
-      cep,
-    });
+    try {
+      const result = await calculateDrivingDistance({
+        street,
+        number,
+        complement: customer.complement,
+        neighborhood: customer.neighborhood,
+        city: customer.city || 'Guarulhos',
+        state: customer.state || 'SP',
+        cep: customer.cep,
+      });
 
-    if (result.success && result.distanceKm !== undefined) {
-      const calc = calculateDeliveryFeeFromDistance(result.distanceKm);
-      setDistanceState({
-        isCalculating: false,
-        distanceKm: calc.distanceKm,
-        fee: calc.fee,
-        isOutOfRange: calc.isOutOfRange,
-        hasCalculated: true,
-        error: calc.isOutOfRange ? calc.message : undefined,
-      });
-    } else {
-      setDistanceState({
-        isCalculating: false,
-        isOutOfRange: false,
-        hasCalculated: true,
-        distanceKm: undefined,
-        fee: undefined,
-        error:
-          result.error ||
-          'Não foi possível localizar o endereço ou calcular a rota. Verifique se o CEP, rua, número e cidade estão corretos ou consulte a pizzaria.',
-      });
+      setDistanceDetails(result);
+
+      if (result.success && typeof result.distanceKm === 'number') {
+        setDistanceKm(result.distanceKm);
+        setFormattedDistanceKm(result.formattedKm || null);
+        setFoundAddress(result.foundAddress || null);
+        setIsAddressConfirmed(true);
+        setDistanceError(null);
+      } else {
+        setDistanceKm(null);
+        setFormattedDistanceKm(null);
+        setFoundAddress(null);
+        setDistanceError(result.error || 'Não foi possível localizar exatamente este endereço. Confira o CEP e o número.');
+      }
+    } catch {
+      setDistanceKm(null);
+      setFormattedDistanceKm(null);
+      setFoundAddress(null);
+      setDistanceDetails(null);
+      setDistanceError('Falha temporária ao conectar com o serviço do Google Maps. Tente novamente.');
+    } finally {
+      setIsCalculatingDistance(false);
     }
   }, [
     customer.deliveryType,
@@ -400,16 +389,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     customer.city,
     customer.state,
     customer.cep,
-    pizzeria,
   ]);
 
-  // Debounced effect para cálculo em tempo real sem sobrecarregar chamadas
+  // Recálculo automático quando o cliente preencher/alterar o endereço
   useEffect(() => {
     if (customer.deliveryType !== 'entrega') return;
 
     const timer = setTimeout(() => {
       recalculateDistance();
-    }, 650);
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [
@@ -423,9 +411,32 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     recalculateDistance,
   ]);
 
-  // Taxa de entrega calculada dinamicamente
-  const deliveryFee =
-    customer.deliveryType === 'entrega' ? (distanceState.fee !== undefined ? distanceState.fee : 0) : 0;
+  // Cálculo automático da taxa de entrega baseado nos KM calculados pelo Google Maps
+  const deliveryFeeCalculation = useMemo<DeliveryFeeResult | null>(() => {
+    if (customer.deliveryType !== 'entrega') {
+      return {
+        distanceKm: 0,
+        formattedDistanceKm: '0,00 km',
+        bracketKm: null,
+        fee: 0,
+        formattedFee: 'Grátis (Retirada no Balcão)',
+        isAboveLimit: false,
+        statusText: 'Retirada no Balcão: taxa grátis',
+      };
+    }
+
+    if (distanceKm === null || typeof distanceKm !== 'number') {
+      return null;
+    }
+
+    return calculateDeliveryFee(distanceKm);
+  }, [customer.deliveryType, distanceKm]);
+
+  // Taxa numérica adicionada ao total (0 se retirada ou se acima do limite de 9 km aguardando confirmação)
+  const deliveryFee = customer.deliveryType === 'entrega' && deliveryFeeCalculation?.fee !== null
+    ? (deliveryFeeCalculation?.fee ?? 0)
+    : 0;
+
   const grandTotal = subtotal + deliveryFee;
 
   // Handle receipt upload
@@ -485,24 +496,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const isPix = customer.paymentMethod === 'pix';
   const isPixMissingReceipt = isPix && !receiptFile;
 
-  // Bloqueio de entrega:
-  // Se entrega: precisa de endereço válido, taxa calculada, e NÃO pode estar fora da área (> 9 km)
-  const isDeliveryCalculating = customer.deliveryType === 'entrega' && distanceState.isCalculating;
-  const isDeliveryOutOfRange = customer.deliveryType === 'entrega' && distanceState.isOutOfRange;
+  // Validação simples de endereço para entrega (não bloqueia por distância nem 9 km)
   const isDeliveryIncomplete =
     customer.deliveryType === 'entrega' &&
     (!customer.street.trim() || !customer.number.trim() || !customer.neighborhood.trim() || !customer.cep?.trim());
-  const isDeliveryFeeMissing =
-    customer.deliveryType === 'entrega' && (!distanceState.hasCalculated || distanceState.fee === undefined);
-  const isDeliveryHasError = customer.deliveryType === 'entrega' && Boolean(distanceState.error);
 
-  const isSubmitDisabled =
-    isPixMissingReceipt ||
-    isDeliveryCalculating ||
-    isDeliveryOutOfRange ||
-    isDeliveryIncomplete ||
-    isDeliveryFeeMissing ||
-    isDeliveryHasError;
+  const isSubmitDisabled = isPixMissingReceipt || isDeliveryIncomplete;
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
@@ -524,15 +523,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       if (!customer.neighborhood.trim()) errs.neighborhood = 'Informe o bairro';
       if (!customer.city?.trim()) errs.city = 'Informe a cidade';
       if (!customer.state?.trim()) errs.state = 'Informe o estado';
-
-      if (distanceState.isOutOfRange) {
-        errs.distance =
-          'Esse endereço está fora da nossa área padrão de entrega. Consulte a pizzaria para verificar a disponibilidade da entrega.';
-      } else if (distanceState.error) {
-        errs.distance = distanceState.error;
-      } else if (distanceState.fee === undefined) {
-        errs.distance = 'Aguarde o cálculo automático da taxa de entrega.';
-      }
     }
 
     if (customer.paymentMethod === 'pix' && !receiptFile) {
@@ -547,10 +537,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     e.preventDefault();
     if (!validate()) return;
 
-    if (customer.deliveryType === 'entrega' && (distanceState.isOutOfRange || distanceState.fee === undefined)) {
-      return;
-    }
-
     if (customer.paymentMethod === 'pix' && !receiptFile) {
       return;
     }
@@ -560,7 +546,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     const updatedCustomer: OrderCustomer = {
       ...customer,
-      deliveryDistanceKm: distanceState.distanceKm,
+      deliveryDistanceKm: distanceKm ?? undefined,
+      deliveryFee: deliveryFeeCalculation?.fee ?? null,
+      deliveryFeeText: deliveryFeeCalculation?.formattedFee,
       pixReceipt: receiptFile
         ? {
             fileName: receiptFile.name,
@@ -588,7 +576,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         items,
         subtotal,
         deliveryFee,
-        deliveryDistanceKm: distanceState.distanceKm,
+        deliveryDistanceKm: distanceKm ?? undefined,
         total: grandTotal,
         deliveryType: customer.deliveryType,
         paymentMethod: customer.paymentMethod,
@@ -610,6 +598,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setTimeout(() => setCopiedMessage(false), 2500);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-xs animate-fadeIn overflow-y-auto">
@@ -681,7 +671,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         <div className="flex items-center gap-3">
                           <div className="w-14 h-14 rounded-lg overflow-hidden bg-[#F0EAE1] shrink-0 border border-[#E8E0D5]">
                             <img
-                              src={prod.image}
+                              src={safeImageUrl(prod.image)}
                               alt={prod.name}
                               className="w-full h-full object-cover"
                               loading="lazy"
@@ -803,7 +793,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   2. Como deseja receber?
                 </h3>
                 <div className="text-[11px] text-[#6B6B6B] flex items-center gap-1.5 flex-wrap">
-                  <span>Origem: <strong>{pizzeria.address}, {pizzeria.neighborhood ? `${pizzeria.neighborhood}, ` : ''}{pizzeria.city}</strong></span>
+                  <span>Origem fixa: <strong>{pizzeria.address} - {pizzeria.neighborhood ? `${pizzeria.neighborhood}, ` : ''}{pizzeria.city} - {pizzeria.state}</strong></span>
                 </div>
               </div>
 
@@ -1005,9 +995,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       <input
                         type="text"
                         required
-                        value={customer.city || 'São Paulo'}
+                        value={customer.city || 'Guarulhos'}
                         onChange={(e) => setCustomer({ ...customer, city: e.target.value })}
-                        placeholder="Ex: São Paulo"
+                        placeholder="Ex: Guarulhos"
                         className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
                       />
                     </div>
@@ -1043,51 +1033,161 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     />
                   </div>
 
-                  {/* CARD DE CÁLCULO AUTOMÁTICO DA TAXA POR DISTÂNCIA */}
-                  <div className="pt-2 border-t border-[#E8E0D5]">
-                    {distanceState.isCalculating ? (
-                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-center justify-between gap-3 animate-pulse">
+                  {/* INFORMAÇÃO DE ENDEREÇO LOCALIZADO E DISTÂNCIA COM GOOGLE MAPS */}
+                  <div className="pt-3 border-t border-[#E8E0D5] space-y-2.5">
+                    {isCalculatingDistance ? (
+                      <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-center justify-between gap-3 animate-pulse">
                         <div className="flex items-center gap-2">
                           <Loader2 className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
-                          <span>Calculando distância e rota do endereço...</span>
+                          <span>Localizando endereço e calculando rota oficial com Google Maps...</span>
                         </div>
-                        <span className="text-[10px] text-amber-700">Tabela oficial</span>
+                        <span className="text-[10px] text-amber-700 font-mono">Rotas reais</span>
                       </div>
-                    ) : distanceState.isOutOfRange ? (
-                      /* ACIMA DE 9 KM */
-                      <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-900 text-xs space-y-1.5 shadow-xs">
-                        <div className="flex items-start gap-2">
-                          <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <strong className="block font-bold text-red-950">
-                              Distância calculada: {distanceState.distanceKm} km
-                            </strong>
-                            <p className="text-red-800 text-[11px] leading-relaxed mt-0.5">
-                              Esse endereço está fora da nossa área padrão de entrega. Consulte a pizzaria para verificar a disponibilidade da entrega.
-                            </p>
+                    ) : formattedDistanceKm && foundAddress ? (
+                      <div className="space-y-2">
+                        {/* Endereço Encontrado e Confirmação */}
+                        <div className="p-3.5 bg-[#F5EFE6] border border-[#E8E0D5] rounded-xl text-xs space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2 min-w-0">
+                              <MapPin className="w-4 h-4 text-[#E4171E] shrink-0 mt-0.5" />
+                              <div className="min-w-0">
+                                <span className="text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider block">
+                                  Endereço encontrado:
+                                </span>
+                                <span className="font-bold text-[#1C1C1C] text-sm block leading-snug break-words">
+                                  {foundAddress}
+                                </span>
+                              </div>
+                            </div>
                             <button
                               type="button"
-                              onClick={() => {
-                                const consultMsg = `Olá! Gostaria de consultar se vocês fazem entrega para o endereço: ${customer.street}, ${customer.number} - ${customer.neighborhood}, ${customer.city}/${customer.state} (Distância estimada: ${distanceState.distanceKm} km).`;
-                                openWhatsApp(pizzeria.whatsappNumber, consultMsg);
-                              }}
-                              className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 hover:bg-red-800 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                              onClick={() => recalculateDistance()}
+                              className="px-2 py-1 bg-white border border-[#E8E0D5] rounded-lg text-[11px] font-medium text-[#1C1C1C] hover:bg-[#FBF9F6] transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                              title="Recalcular"
                             >
-                              <Send className="w-3 h-3" />
-                              <span>Consultar Disponibilidade no WhatsApp</span>
+                              <RefreshCw className="w-3 h-3 text-[#6B6B6B]" />
+                              <span>Atualizar</span>
                             </button>
                           </div>
+
+                          <label className="flex items-center gap-2 pt-1 border-t border-[#E8E0D5]/60 text-xs text-[#1C1C1C] cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isAddressConfirmed}
+                              onChange={(e) => setIsAddressConfirmed(e.target.checked)}
+                              className="accent-[#E4171E] w-4 h-4 rounded cursor-pointer"
+                            />
+                            <span className="font-medium">
+                              Confirmo que este é exatamente o meu endereço de entrega
+                            </span>
+                          </label>
                         </div>
+
+                        {/* Card da Distância Rodoviária Real e Taxa de Entrega Oficial */}
+                        <div className="p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-xl space-y-2.5 shadow-xs">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700 shrink-0 mt-0.5">
+                              <Bike className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 border-b border-emerald-200/80">
+                                <div>
+                                  <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">
+                                    Distância:
+                                  </span>
+                                  <span className="font-mono text-base font-bold text-emerald-950">
+                                    {formattedDistanceKm}
+                                  </span>
+                                </div>
+
+                                <div>
+                                  <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">
+                                    Taxa de entrega:
+                                  </span>
+                                  <span className={`font-mono text-base font-bold ${
+                                    deliveryFeeCalculation?.isAboveLimit ? 'text-amber-800' : 'text-[#E4171E]'
+                                  }`}>
+                                    {deliveryFeeCalculation ? deliveryFeeCalculation.formattedFee : 'Calculando...'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <p className="text-[11px] text-emerald-800 pt-1.5 leading-snug">
+                                {deliveryFeeCalculation?.isAboveLimit ? (
+                                  <span className="text-amber-900 font-medium">
+                                    Distância superior a 9 km: consulte a taxa de entrega diretamente com a pizzaria via WhatsApp.
+                                  </span>
+                                ) : (
+                                  <span>
+                                    Cálculo rodoviário veicular oficial (Google Maps · faixa até {deliveryFeeCalculation?.bracketKm} km). A taxa foi adicionada automaticamente ao total do pedido.
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Painel de Diagnóstico Google Maps (Desenvolvimento / Verificação) */}
+                        {distanceDetails && (
+                          <div className="border border-[#E8E0D5] rounded-xl overflow-hidden text-xs bg-white">
+                            <button
+                              type="button"
+                              onClick={() => setShowDevDetails((prev) => !prev)}
+                              className="w-full px-3 py-2 bg-[#FBF9F6] hover:bg-[#F5EFE6] transition-colors flex items-center justify-between text-[#6B6B6B] text-[11px] font-medium cursor-pointer"
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Route className="w-3.5 h-3.5 text-[#E4171E]" />
+                                <span>Ver Diagnóstico da Rota Google Maps (Dev)</span>
+                              </span>
+                              {showDevDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </button>
+
+                            {showDevDetails && (
+                              <div className="p-3 space-y-2 bg-[#FBF9F6]/50 font-mono text-[11px] text-[#1C1C1C] border-t border-[#E8E0D5]">
+                                <div>
+                                  <strong className="text-[#E4171E] block">ORIGEM (Pizzaria):</strong>
+                                  <span>Latitude: {distanceDetails.origin?.lat}</span><br />
+                                  <span>Longitude: {distanceDetails.origin?.lng}</span><br />
+                                  <span className="text-[#6B6B6B]">{distanceDetails.origin?.address}</span>
+                                </div>
+                                <div className="pt-1.5 border-t border-[#E8E0D5]">
+                                  <strong className="text-emerald-700 block">DESTINO (Cliente):</strong>
+                                  <span>Latitude: {distanceDetails.destination?.lat}</span><br />
+                                  <span>Longitude: {distanceDetails.destination?.lng}</span>
+                                </div>
+                                <div className="pt-1.5 border-t border-[#E8E0D5]">
+                                  <strong className="text-[#1C1C1C] block">ENDEREÇO INFORMADO:</strong>
+                                  <span>{distanceDetails.inputAddress}</span>
+                                </div>
+                                <div className="pt-1.5 border-t border-[#E8E0D5]">
+                                  <strong className="text-[#1C1C1C] block">ENDEREÇO ENCONTRADO:</strong>
+                                  <span>{distanceDetails.foundAddress}</span>
+                                </div>
+                                <div className="pt-1.5 border-t border-[#E8E0D5]">
+                                  <strong className="text-[#1C1C1C] block">DISTÂNCIA:</strong>
+                                  <span>{distanceDetails.formattedKm} ({distanceDetails.distanceKm} km, {distanceDetails.distanceMeters ?? (distanceDetails.distanceKm ? Math.round(distanceDetails.distanceKm * 1000) : 0)} metros)</span>
+                                </div>
+                                <div className="pt-1.5 border-t border-[#E8E0D5]">
+                                  <strong className="text-[#1C1C1C] block">TAXA DE ENTREGA:</strong>
+                                  <span>{deliveryFeeCalculation?.formattedFee} {deliveryFeeCalculation?.bracketKm ? `(faixa de até ${deliveryFeeCalculation.bracketKm} km)` : '(distância > 9 km)'}</span>
+                                </div>
+                                <div className="pt-1.5 border-t border-[#E8E0D5]">
+                                  <strong className="text-[#1C1C1C] block">ROTA:</strong>
+                                  <span>{distanceDetails.viaRoad || 'Vias locais'}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ) : distanceState.error ? (
-                      /* ERRO NO CÁLCULO */
-                      <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-start justify-between gap-3 shadow-xs">
+                    ) : distanceError ? (
+                      <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-start justify-between gap-3 shadow-xs">
                         <div className="flex items-start gap-2 min-w-0">
                           <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                           <div className="min-w-0">
-                            <span className="font-semibold block">Não foi possível calcular a taxa:</span>
+                            <span className="font-semibold block">Atenção ao endereço:</span>
                             <span className="text-[11px] text-amber-800 block leading-snug">
-                              {distanceState.error}
+                              {distanceError}
                             </span>
                           </div>
                         </div>
@@ -1095,40 +1195,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           type="button"
                           onClick={() => recalculateDistance()}
                           className="px-2.5 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-amber-900 hover:bg-amber-100 transition-colors shrink-0 flex items-center gap-1 cursor-pointer"
+                          title="Tentar recalcular rota"
                         >
                           <RefreshCw className="w-3 h-3" />
-                          <span>Recalcular</span>
+                          <span>Tentar de novo</span>
                         </button>
                       </div>
-                    ) : distanceState.distanceKm !== undefined && distanceState.fee !== undefined ? (
-                      /* SUCESSO NO CÁLCULO */
-                      <div className="p-3.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-xl flex items-center justify-between gap-3 shadow-xs">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-[#FBE4E1] text-[#E4171E] shrink-0">
-                            <Bike className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-semibold text-[#1C1C1C] block">
-                              Distância estimada: <strong className="font-mono font-bold text-sm text-[#1C1C1C]">{distanceState.distanceKm} km</strong>
-                            </span>
-                            <span className="text-[11px] text-[#6B6B6B]">
-                              Calculada automaticamente por rota a partir da pizzaria
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-[10px] text-[#6B6B6B] uppercase font-bold block">
-                            Taxa de entrega
-                          </span>
-                          <span className="text-base font-bold text-[#E4171E] font-mono tabular-nums">
-                            {formatBRL(distanceState.fee)}
-                          </span>
-                        </div>
-                      </div>
                     ) : (
-                      /* AGUARDANDO PREENCHIMENTO */
-                      <div className="p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-xs text-[#6B6B6B] flex items-center justify-between">
-                        <span>Preencha o CEP, rua e número para calcular a taxa de entrega automaticamente.</span>
+                      <div className="p-3 bg-[#FBF9F6] border border-[#E8E0D5] rounded-xl flex items-center gap-3 text-xs text-[#6B6B6B]">
+                        <div className="p-2 rounded-lg bg-[#FBE4E1] text-[#E4171E] shrink-0">
+                          <Bike className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="font-semibold text-[#1C1C1C] block">Cálculo de Distância Oficial Google Maps</span>
+                          <span className="text-[11px] text-[#6B6B6B]">
+                            Preencha o CEP, a rua e o número do imóvel para calcular a distância rodoviária exata até seu endereço.
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1136,7 +1219,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               ) : (
                 <div className="p-4 rounded-xl bg-white border border-[#E8E0D5] text-xs text-[#1C1C1C] space-y-1 shadow-xs">
                   <span className="font-bold text-[#1C1C1C] block">Endereço para Retirada:</span>
-                  <p className="text-[#6B6B6B]">{pizzeria.address} · {pizzeria.city}</p>
+                  <p className="text-[#6B6B6B]">{pizzeria.address} - {pizzeria.neighborhood}, {pizzeria.city} - {pizzeria.state} (CEP: {pizzeria.cep})</p>
                   <p className="text-[#6B6B6B]">Tempo estimado de preparo: 25 a 35 minutos. Taxa de entrega: <strong>Grátis</strong>.</p>
                 </div>
               )}
@@ -1447,60 +1530,63 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       <MapPin className="w-3.5 h-3.5 text-[#E4171E]" />
                       ENDEREÇO DE ENTREGA
                     </span>
-                    {distanceState.distanceKm !== undefined && (
-                      <span className="font-mono text-[#E4171E] font-bold">
-                        {distanceState.distanceKm} km
-                      </span>
-                    )}
                   </h5>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[#1C1C1C]">
+                    <p><span className="text-[#6B6B6B]">CEP:</span> {customer.cep || 'Não informado'}</p>
                     <p><span className="text-[#6B6B6B]">Rua:</span> {customer.street || 'Não informada'}</p>
                     <p><span className="text-[#6B6B6B]">Número:</span> {customer.number || 'Não informado'}</p>
                     <p><span className="text-[#6B6B6B]">Complemento:</span> {customer.complement || '-'}</p>
                     <p><span className="text-[#6B6B6B]">Bairro:</span> {customer.neighborhood || 'Não informado'}</p>
-                    <p><span className="text-[#6B6B6B]">Cidade/UF:</span> {customer.city || 'São Paulo'} - {customer.state || 'SP'}</p>
-                    <p><span className="text-[#6B6B6B]">CEP:</span> {customer.cep || 'Não informado'}</p>
+                    <p><span className="text-[#6B6B6B]">Cidade / UF:</span> {customer.city || 'Guarulhos'} - {customer.state || 'SP'}</p>
                   </div>
 
-                  {distanceState.distanceKm !== undefined && distanceState.fee !== undefined && !distanceState.isOutOfRange && (
-                    <div className="mt-2 pt-2 border-t border-[#E8E0D5] flex items-center justify-between text-xs font-semibold">
-                      <span className="text-[#6B6B6B]">Distância estimada:</span>
-                      <span className="text-[#1C1C1C] font-mono">{distanceState.distanceKm} km</span>
-                    </div>
-                  )}
-
-                  {distanceState.fee !== undefined && !distanceState.isOutOfRange && (
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-[#6B6B6B]">Taxa de entrega:</span>
-                      <span className="text-[#E4171E] font-mono font-bold">{formatBRL(distanceState.fee)}</span>
+                  {formattedDistanceKm && (
+                    <div className="mt-2 pt-2 border-t border-[#E8E0D5] space-y-1 text-xs">
+                      <div className="flex items-center justify-between font-semibold">
+                        <span className="text-[#6B6B6B]">Distância calculada:</span>
+                        <span className="text-emerald-700 font-mono font-bold">{formattedDistanceKm}</span>
+                      </div>
+                      <div className="flex items-center justify-between font-semibold">
+                        <span className="text-[#6B6B6B]">Taxa de entrega:</span>
+                        <span className={`font-mono font-bold ${deliveryFeeCalculation?.isAboveLimit ? 'text-amber-800' : 'text-[#E4171E]'}`}>
+                          {deliveryFeeCalculation ? deliveryFeeCalculation.formattedFee : 'Calculando...'}
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
               )}
 
               {/* TOTAIS */}
-              <div className="pt-2 border-t border-[#E8E0D5] space-y-1 text-xs">
+              <div className="pt-2 border-t border-[#E8E0D5] space-y-1.5 text-xs">
                 <div className="flex justify-between text-[#6B6B6B]">
                   <span>Subtotal:</span>
                   <span className="tabular-nums text-[#1C1C1C] font-mono">{formatBRL(subtotal)}</span>
                 </div>
+
                 <div className="flex justify-between text-[#6B6B6B]">
-                  <span>Taxa de Entrega:</span>
-                  <span className="tabular-nums text-[#1C1C1C] font-mono">
-                    {customer.deliveryType === 'retirada'
-                      ? 'Grátis (Retirada no Balcão)'
-                      : distanceState.isCalculating
-                      ? 'Calculando por rota...'
-                      : distanceState.fee !== undefined && !distanceState.isOutOfRange
-                      ? `${formatBRL(distanceState.fee)}`
-                      : distanceState.isOutOfRange
-                      ? 'Fora da área padrão (> 9 km)'
-                      : 'Aguardando endereço'}
+                  <span>Taxa de entrega:</span>
+                  <span className={`tabular-nums font-mono font-semibold ${
+                    customer.deliveryType === 'entrega' && deliveryFeeCalculation?.isAboveLimit
+                      ? 'text-amber-800'
+                      : 'text-[#1C1C1C]'
+                  }`}>
+                    {customer.deliveryType === 'entrega'
+                      ? (deliveryFeeCalculation ? deliveryFeeCalculation.formattedFee : 'A calcular com endereço')
+                      : 'R$ 0,00 (Retirada)'}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm font-bold text-[#1C1C1C] pt-1 border-t border-[#E8E0D5]">
-                  <span>TOTAL:</span>
-                  <span className="text-[#E4171E] text-base tabular-nums font-bold font-mono">
+
+                <div className="flex justify-between items-baseline text-sm font-bold text-[#1C1C1C] pt-1.5 border-t border-[#E8E0D5]">
+                  <div>
+                    <span>TOTAL:</span>
+                    {customer.deliveryType === 'entrega' && deliveryFeeCalculation?.isAboveLimit && (
+                      <span className="text-[10px] text-amber-700 font-normal block">
+                        (+ taxa a consultar via WhatsApp)
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[#E4171E] text-base sm:text-lg tabular-nums font-bold font-mono">
                     {formatBRL(grandTotal)}
                   </span>
                 </div>
@@ -1519,26 +1605,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <span>ENVIAR PEDIDO NO WHATSAPP</span>
                 </button>
 
-                {/* Avisos explicativos de bloqueio */}
-                {isDeliveryCalculating ? (
-                  <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold text-center flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 shrink-0 text-amber-600 animate-spin" />
-                    <span>Calculando rota e taxa de entrega com base na distância...</span>
-                  </div>
-                ) : isDeliveryOutOfRange ? (
-                  <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs font-semibold text-center flex items-center justify-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
-                    <span>Esse endereço está fora da nossa área padrão de entrega. Consulte a pizzaria para verificar a disponibilidade da entrega.</span>
-                  </div>
-                ) : isDeliveryHasError ? (
+                {/* Avisos explicativos */}
+                {isDeliveryIncomplete ? (
                   <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold text-center flex items-center justify-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-                    <span>Confira o endereço digitado para o cálculo da rota ou consulte a pizzaria.</span>
-                  </div>
-                ) : isDeliveryIncomplete ? (
-                  <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold text-center flex items-center justify-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-                    <span>Preencha o CEP, rua e número para calcular a taxa de entrega.</span>
+                    <span>Preencha o CEP, rua, número e bairro para entrega.</span>
                   </div>
                 ) : isPixMissingReceipt ? (
                   <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold text-center flex items-center justify-center gap-2">
