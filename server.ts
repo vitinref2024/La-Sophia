@@ -45,6 +45,45 @@ async function startServer() {
     }
   };
 
+  // Helper para salvar foto permanentemente em disco (tanto em public/images pelo nome do sabor quanto por ID)
+  const saveImageToDisk = (base64Data: string, productId?: string, flavorName?: string) => {
+    try {
+      const base64Clean = base64Data.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Clean, 'base64');
+      const targetPaths: string[] = [];
+
+      if (flavorName) {
+        // Salva com nome exato do sabor para a cascata /images/
+        targetPaths.push(path.resolve(__dirname, `public/images/${flavorName}.png`));
+        targetPaths.push(path.resolve(__dirname, `public/images/${flavorName}.jpg`));
+        targetPaths.push(path.resolve(__dirname, `public/imagens/${flavorName}.png`));
+        targetPaths.push(path.resolve(__dirname, `public/imagens/${flavorName}.jpg`));
+        if (fs.existsSync(path.resolve(__dirname, 'dist'))) {
+          targetPaths.push(path.resolve(__dirname, `dist/images/${flavorName}.png`));
+          targetPaths.push(path.resolve(__dirname, `dist/images/${flavorName}.jpg`));
+        }
+      }
+
+      if (productId) {
+        targetPaths.push(path.resolve(__dirname, `public/imagens/custom/${productId}.jpg`));
+        targetPaths.push(path.resolve(__dirname, `public/images/${productId}.jpg`));
+        if (fs.existsSync(path.resolve(__dirname, 'dist'))) {
+          targetPaths.push(path.resolve(__dirname, `dist/imagens/custom/${productId}.jpg`));
+          targetPaths.push(path.resolve(__dirname, `dist/images/${productId}.jpg`));
+        }
+      }
+
+      for (const filePath of targetPaths) {
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        fs.writeFileSync(filePath, buffer);
+      }
+      return true;
+    } catch (e) {
+      console.warn('Erro ao gravar arquivo de imagem no disco:', e);
+      return false;
+    }
+  };
+
   // Endpoint para listar todas as fotos personalizadas salvas no servidor
   app.get('/api/photos', (_req, res) => {
     try {
@@ -58,16 +97,9 @@ async function startServer() {
   // Endpoint para salvar todas as fotos enviadas pelo cliente de forma permanente
   app.post('/api/save-all-photos', (req, res) => {
     try {
-      const { photos } = req.body || {};
+      const { photos, flavorNames } = req.body || {};
       if (!photos || typeof photos !== 'object') {
         return res.status(400).json({ success: false, error: 'Objeto de fotos inválido' });
-      }
-
-      const publicCustomDir = path.resolve(__dirname, 'public/imagens/custom');
-      const distCustomDir = path.resolve(__dirname, 'dist/imagens/custom');
-      fs.mkdirSync(publicCustomDir, { recursive: true });
-      if (fs.existsSync(path.resolve(__dirname, 'dist'))) {
-        fs.mkdirSync(distCustomDir, { recursive: true });
       }
 
       const manifest = getPhotosManifest();
@@ -79,16 +111,14 @@ async function startServer() {
           continue;
         }
 
-        const base64Clean = dataUrl.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Clean, 'base64');
+        const flavor = flavorNames && typeof flavorNames === 'object' ? flavorNames[productId] : undefined;
+        saveImageToDisk(dataUrl, productId, flavor);
+
         const filename = `${productId}.jpg`;
-
-        fs.writeFileSync(path.join(publicCustomDir, filename), buffer);
-        if (fs.existsSync(distCustomDir)) {
-          fs.writeFileSync(path.join(distCustomDir, filename), buffer);
-        }
-
         manifest[productId] = `/imagens/custom/${filename}?v=${now}`;
+        if (flavor) {
+          manifest[flavor] = `/images/${encodeURI(flavor)}.png?v=${now}`;
+        }
         count++;
       }
 
@@ -104,33 +134,25 @@ async function startServer() {
   // Endpoint para salvar uma foto individual no servidor
   app.post('/api/upload-product-photo', (req, res) => {
     try {
-      const { productId, base64Data } = req.body || {};
+      const { productId, base64Data, flavorName } = req.body || {};
       if (!productId || !base64Data) {
         return res.status(400).json({ success: false, error: 'productId ou base64Data ausentes' });
       }
 
-      const publicCustomDir = path.resolve(__dirname, 'public/imagens/custom');
-      const distCustomDir = path.resolve(__dirname, 'dist/imagens/custom');
-      fs.mkdirSync(publicCustomDir, { recursive: true });
-      if (fs.existsSync(path.resolve(__dirname, 'dist'))) {
-        fs.mkdirSync(distCustomDir, { recursive: true });
-      }
-
-      const base64Clean = base64Data.replace(/^data:image\/\w+;base64,/, '');
-      const buffer = Buffer.from(base64Clean, 'base64');
-      const filename = `${productId}.jpg`;
-
-      fs.writeFileSync(path.join(publicCustomDir, filename), buffer);
-      if (fs.existsSync(distCustomDir)) {
-        fs.writeFileSync(path.join(distCustomDir, filename), buffer);
-      }
+      saveImageToDisk(base64Data, productId, flavorName);
 
       const manifest = getPhotosManifest();
-      const relativePath = `/imagens/custom/${filename}?v=${Date.now()}`;
+      const relativePath = flavorName
+        ? `/images/${encodeURI(flavorName)}.png?v=${Date.now()}`
+        : `/imagens/custom/${productId}.jpg?v=${Date.now()}`;
+
       manifest[productId] = relativePath;
+      if (flavorName) {
+        manifest[flavorName] = relativePath;
+      }
       savePhotosManifest(manifest);
 
-      res.json({ success: true, productId, path: relativePath });
+      res.json({ success: true, productId, flavorName, path: relativePath });
     } catch (err: any) {
       console.error('Erro em /api/upload-product-photo:', err);
       res.status(500).json({ success: false, error: err.message });

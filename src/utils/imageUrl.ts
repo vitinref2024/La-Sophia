@@ -1,7 +1,7 @@
 /**
  * Constante de versão para cache-busting das imagens do cardápio em /images/
  */
-export const IMAGENS_VERSAO = 2;
+export const IMAGENS_VERSAO = 3;
 
 /**
  * Ordem de extensões a tentar para cada sabor: .jpg, .png, .jpeg, .webp
@@ -9,9 +9,9 @@ export const IMAGENS_VERSAO = 2;
 export const EXTENSOES_IMAGEM = ['.jpg', '.png', '.jpeg', '.webp'] as const;
 
 /**
- * Imagem padrão de fallback quando o sabor não possui arquivo em /images/
+ * Imagem padrão de fallback quando o produto não possui foto (vazia por padrão para não exibir produto incorreto)
  */
-export const DEFAULT_FALLBACK_IMAGE = `/images/Calabresa.png?v=${IMAGENS_VERSAO}`;
+export const DEFAULT_FALLBACK_IMAGE = '';
 
 /**
  * Retorna o nome exato do sabor do cardápio, removendo apenas o código numérico inicial (ex: "01 - ").
