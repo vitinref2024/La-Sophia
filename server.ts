@@ -264,9 +264,9 @@ async function startServer() {
   const publicImagesPath = path.resolve(__dirname, 'public/images');
 
   const staticImageOptions = {
-    maxAge: '1d',
+    maxAge: '365d',
     setHeaders: (res: express.Response, filePath: string) => {
-      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, stale-while-revalidate=86400');
       if (filePath.endsWith('.png')) {
         res.setHeader('Content-Type', 'image/png');
       } else if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {

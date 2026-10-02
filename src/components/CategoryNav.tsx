@@ -44,15 +44,18 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
     const key = primaryFilter ? primaryFilter : activeCategory;
     const activeBtn = buttonRefs.current[key];
     if (activeBtn && containerRef.current) {
-      const container = containerRef.current;
-      const btnLeft = activeBtn.offsetLeft;
-      const btnWidth = activeBtn.offsetWidth;
-      const containerWidth = container.offsetWidth;
+      window.requestAnimationFrame(() => {
+        if (!activeBtn || !containerRef.current) return;
+        const container = containerRef.current;
+        const btnLeft = activeBtn.offsetLeft;
+        const btnWidth = activeBtn.offsetWidth;
+        const containerWidth = container.offsetWidth;
 
-      const scrollTarget = btnLeft - containerWidth / 2 + btnWidth / 2;
-      container.scrollTo({
-        left: Math.max(0, scrollTarget),
-        behavior: 'smooth',
+        const scrollTarget = btnLeft - containerWidth / 2 + btnWidth / 2;
+        container.scrollTo({
+          left: Math.max(0, scrollTarget),
+          behavior: 'smooth',
+        });
       });
     }
   }, [activeCategory, primaryFilter]);

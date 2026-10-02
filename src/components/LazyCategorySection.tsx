@@ -52,7 +52,7 @@ export const LazyCategorySection: React.FC<LazyCategorySectionProps> = React.mem
             observer.disconnect();
           }
         },
-        { rootMargin: '600px 0px', threshold: 0 }
+        { rootMargin: '350px 0px', threshold: 0 }
       );
 
       if (sectionRef.current) {
@@ -102,7 +102,7 @@ export const LazyCategorySection: React.FC<LazyCategorySectionProps> = React.mem
                 product={product}
                 viewMode={viewMode}
                 isCompared={isCompared}
-                priority={initialRender && idx < 4}
+                priority={initialRender && idx < 2}
                 onToggleCompare={onToggleCompare}
                 isFavorite={favoriteIds.includes(product.id)}
                 onToggleFavorite={onToggleFavorite}

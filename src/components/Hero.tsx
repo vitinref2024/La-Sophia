@@ -106,18 +106,21 @@ const HeroComponent: React.FC<HeroProps> = ({
 
   return (
     <section className="relative w-full overflow-hidden bg-[#111111] text-white">
-      {/* Background Image: Authentic pizza in wood-fired oven with embers */}
-      <img
-        src={pizzeria.heroImage || 'https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=1920&q=85'}
-        alt="Pizza artesanal no forno a lenha La Sophia"
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none select-none brightness-105 contrast-105"
-        loading="eager"
-        fetchPriority="high"
-        decoding="async"
-        width="1920"
-        height="1080"
-        referrerPolicy="no-referrer"
-      />
+      {/* Background Image: Authentic pizza in wood-fired oven with embers (Responsive WebP) */}
+      <picture className="absolute inset-0 w-full h-full pointer-events-none select-none">
+        <source media="(max-width: 768px)" srcSet="/images/hero-bg-sm.webp" type="image/webp" />
+        <source srcSet="/images/hero-bg.webp" type="image/webp" />
+        <img
+          src="/images/hero-bg.webp"
+          alt="Pizza artesanal no forno a lenha La Sophia"
+          className="w-full h-full object-cover object-center brightness-105 contrast-105"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+          width="1280"
+          height="720"
+        />
+      </picture>
 
       {/* Light gradient overlay that keeps the pizza image clearly visible while preserving text legibility */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/50 to-[#111111]/95 pointer-events-none" />
@@ -220,10 +223,10 @@ const HeroComponent: React.FC<HeroProps> = ({
           >
             <div className="flex items-center gap-3 min-w-0">
               <img
-                src="/imagens/pizzas/Calabresa.png"
+                src="/images/17 - Calabresa.webp"
                 alt="Pizza Meia-a-Meia Especial La Sophia"
                 className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-700/80 shadow-xs"
-                loading="eager"
+                loading="lazy"
                 decoding="async"
                 width="56"
                 height="56"

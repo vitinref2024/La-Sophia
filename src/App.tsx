@@ -644,39 +644,47 @@ export default function App() {
     }
   };
 
-  // Scrollspy: update active category tab as user scrolls through the menu
+  // Scrollspy: update active category tab as user scrolls through the menu (throttled with rAF to eliminate forced reflows)
   useEffect(() => {
+    let ticking = false;
+
     const handleScroll = () => {
-      if (isManualScrollRef.current || specialFilter !== null) return;
+      if (ticking) return;
+      ticking = true;
 
-      const menuEl = document.getElementById('cardapio');
-      if (!menuEl) return;
+      window.requestAnimationFrame(() => {
+        ticking = false;
+        if (isManualScrollRef.current || specialFilter !== null) return;
 
-      const headerHeight = window.innerWidth >= 640 ? 64 : 56;
-      const navHeight = 48;
-      const headerOffset = headerHeight + navHeight + 16;
+        const menuEl = document.getElementById('cardapio');
+        if (!menuEl) return;
 
-      const menuTop = menuEl.getBoundingClientRect().top;
-      // If user is at or above the top of the menu, highlight 'todas'
-      if (menuTop > headerOffset) {
-        setActiveCategory('todas');
-        return;
-      }
+        const headerHeight = window.innerWidth >= 640 ? 64 : 56;
+        const navHeight = 48;
+        const headerOffset = headerHeight + navHeight + 16;
 
-      const realCategories = CATEGORIES.filter((c) => c.id !== 'todas');
-      let currentActive = 'todas';
+        const menuTop = menuEl.getBoundingClientRect().top;
+        // If user is at or above the top of the menu, highlight 'todas'
+        if (menuTop > headerOffset) {
+          setActiveCategory((prev) => (prev !== 'todas' ? 'todas' : prev));
+          return;
+        }
 
-      for (const cat of realCategories) {
-        const el = document.getElementById(cat.id);
-        if (el) {
-          const top = el.getBoundingClientRect().top;
-          if (top <= headerOffset + 40) {
-            currentActive = cat.id;
+        const realCategories = CATEGORIES.filter((c) => c.id !== 'todas');
+        let currentActive = 'todas';
+
+        for (const cat of realCategories) {
+          const el = document.getElementById(cat.id);
+          if (el) {
+            const top = el.getBoundingClientRect().top;
+            if (top <= headerOffset + 40) {
+              currentActive = cat.id;
+            }
           }
         }
-      }
 
-      setActiveCategory(currentActive);
+        setActiveCategory((prev) => (prev !== currentActive ? currentActive : prev));
+      });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -987,7 +995,7 @@ export default function App() {
                 favoriteIds={favoriteIds}
                 specialFilter={specialFilter}
                 searchTerm={searchTerm}
-                initialRender={sectionIdx < 2}
+                initialRender={sectionIdx === 0}
                 onToggleCompare={handleToggleCompare}
                 onToggleFavorite={handleToggleFavorite}
                 onSelectProduct={handleSelectProduct}

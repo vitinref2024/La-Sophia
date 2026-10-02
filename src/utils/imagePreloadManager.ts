@@ -33,12 +33,23 @@ export function startBackgroundCatalogPreload(imageUrls: string[]): void {
 
   if (queue.length === 0) return;
 
-  // 3. Aguardar o carregamento da primeira tela + folga para interações iniciais
+  // 3. Aguardar o carregamento da primeira tela + folga para medições de desempenho/LCP limpo
+  let started = false;
+  const triggerWorker = () => {
+    if (started) return;
+    started = true;
+    window.removeEventListener('scroll', triggerWorker);
+    window.removeEventListener('touchstart', triggerWorker);
+    runBatchWorker(queue);
+  };
+
   const scheduleStart = () => {
-    const delay = 1800; // 1.8 segundos após onload para LCP limpo
-    setTimeout(() => {
-      runBatchWorker(queue);
-    }, delay);
+    // Escuta primeira rolagem/toque do usuário para carregar antecipadamente sob demanda
+    window.addEventListener('scroll', triggerWorker, { passive: true, once: true });
+    window.addEventListener('touchstart', triggerWorker, { passive: true, once: true });
+
+    // Ou inicia cooperativamente após 5 segundos de ociosidade
+    setTimeout(triggerWorker, 5000);
   };
 
   if (document.readyState === 'complete') {
