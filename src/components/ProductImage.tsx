@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Utensils } from 'lucide-react';
 import { Product } from '../types';
 import { getExactFlavorName } from '../utils/imageUrl';
@@ -32,30 +32,23 @@ export const ProductImage: React.FC<ProductImageProps> = ({
   fetchPriority,
   showSolidFallback = true,
 }) => {
+  const [hasError, setHasError] = useState(false);
   const cleanName = getExactFlavorName(product.name);
 
-  // Se o produto possui imagem física associada, renderiza diretamente com WebP de alta performance
-  if (product.image && product.image.trim()) {
-    const rawUrl = product.image.trim();
-    const cleanUrl = rawUrl.split('?')[0];
-    const query = rawUrl.includes('?') ? '?' + rawUrl.split('?')[1] : '';
-    const webpUrl = cleanUrl.endsWith('.webp') ? rawUrl : cleanUrl.replace(/\.(png|jpg|jpeg)$/i, '.webp') + query;
-    const fallbackUrl = cleanUrl.endsWith('.webp') ? cleanUrl.replace(/\.webp$/i, '.png') + query : rawUrl;
-
+  // Se o produto possui imagem física associada e o arquivo responde normalmente, renderiza a foto real
+  if (product.image && product.image.trim() && !hasError) {
     return (
-      <picture className="w-full h-full block">
-        <source type="image/webp" srcSet={webpUrl} />
-        <img
-          src={fallbackUrl}
-          alt={alt || cleanName || product.name}
-          className={className}
-          loading={loading}
-          decoding="async"
-          width={width}
-          height={height}
-          fetchPriority={fetchPriority}
-        />
-      </picture>
+      <img
+        src={product.image}
+        alt={alt || cleanName || product.name}
+        className={className}
+        loading={loading}
+        decoding="async"
+        width={width}
+        height={height}
+        fetchPriority={fetchPriority}
+        onError={() => setHasError(true)}
+      />
     );
   }
 

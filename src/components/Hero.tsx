@@ -223,7 +223,7 @@ const HeroComponent: React.FC<HeroProps> = ({
           >
             <div className="flex items-center gap-3 min-w-0">
               <img
-                src="/images/17 - Calabresa.webp"
+                src="/images/17%20-%20Calabresa.png?v=2"
                 alt="Pizza Meia-a-Meia Especial La Sophia"
                 className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-700/80 shadow-xs"
                 loading="lazy"
