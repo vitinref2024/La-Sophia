@@ -1,7 +1,7 @@
 /**
  * Constante de versão para cache-busting das imagens do cardápio em /images/
  */
-export const IMAGENS_VERSAO = 3;
+export const IMAGENS_VERSAO = 7;
 
 /**
  * Ordem de extensões a tentar para cada sabor: .jpg, .png, .jpeg, .webp
@@ -52,13 +52,11 @@ export function safeImageUrl(url: string | undefined | null): string {
     return url;
   }
   try {
-    const [pathPart, queryPart] = url.split('?');
+    const [pathPart] = url.split('?');
     const encodedPath = encodeURI(decodeURI(pathPart));
-    const versionQuery = queryPart ? queryPart : `v=${IMAGENS_VERSAO}`;
-    return `${encodedPath}?${versionQuery}`;
+    return `${encodedPath}?v=${IMAGENS_VERSAO}`;
   } catch {
-    const [pathPart, queryPart] = url.split('?');
-    const versionQuery = queryPart ? queryPart : `v=${IMAGENS_VERSAO}`;
-    return `${encodeURI(pathPart)}?${versionQuery}`;
+    const [pathPart] = url.split('?');
+    return `${encodeURI(pathPart)}?v=${IMAGENS_VERSAO}`;
   }
 }

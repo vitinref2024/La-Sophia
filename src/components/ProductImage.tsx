@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Utensils } from 'lucide-react';
 import { Product } from '../types';
-import { getExactFlavorName, safeImageUrl } from '../utils/imageUrl';
+import { getExactFlavorName } from '../utils/imageUrl';
 
 export interface ProductImageProps {
   product: Product;
@@ -17,10 +17,9 @@ export interface ProductImageProps {
 
 /**
  * Componente oficial de imagem do catálogo:
- * - Utiliza ESTRITAMENTE a imagem definida em menuData.ts (product.image)
- * - Não faz fallback para outras pizzas ou Calabresa
- * - Não é sobrescrito por localStorage ou Unsplash
- * - Caso não tenha imagem ou haja erro, exibe o estado limpo "Sem Imagem" com ícone e nome do produto
+ * - Renderiza diretamente a imagem real do produto (<img src={product.image} alt={product.name} />)
+ * - Não possui onError ou fallback que esconda ou substitua a foto real
+ * - Se o produto não possuir arquivo de foto cadastrado, exibe o marcador padrão com ícone e nome
  */
 export const ProductImage: React.FC<ProductImageProps> = ({
   product,
@@ -33,44 +32,37 @@ export const ProductImage: React.FC<ProductImageProps> = ({
   fetchPriority,
   showSolidFallback = true,
 }) => {
-  const [hasError, setHasError] = useState(false);
   const cleanName = getExactFlavorName(product.name);
 
-  // Reseta estado de erro quando o produto ou a imagem mudar
-  useEffect(() => {
-    setHasError(false);
-  }, [product.id, product.image]);
-
-  const rawSrc = product.image ? safeImageUrl(product.image) : '';
-
-  // Se não tem imagem cadastrada ou falhou ao carregar
-  if (!rawSrc || hasError) {
-    if (!showSolidFallback) return null;
+  // Se o produto possui imagem física associada, renderiza diretamente
+  if (product.image && product.image.trim()) {
     return (
-      <div
-        className={`w-full h-full flex flex-col items-center justify-center text-center p-2 bg-[#F0EAE1] text-[#8C827A] select-none ${
-          containerClassName || ''
-        }`}
-      >
-        <Utensils className="w-5 h-5 text-[#A89F95] mb-1" />
-        <span className="text-[10px] font-medium text-[#736B63] truncate max-w-full px-1">
-          {cleanName}
-        </span>
-      </div>
+      <img
+        src={product.image}
+        alt={alt || cleanName || product.name}
+        className={className}
+        loading={loading}
+        decoding="async"
+        width={width}
+        height={height}
+        fetchPriority={fetchPriority}
+      />
     );
   }
 
+  // Se o produto não possui foto física cadastrada, exibe o marcador limpo
+  if (!showSolidFallback) return null;
+
   return (
-    <img
-      src={rawSrc}
-      alt={alt || cleanName}
-      onError={() => setHasError(true)}
-      className={className}
-      loading={loading}
-      decoding="async"
-      width={width}
-      height={height}
-      fetchPriority={fetchPriority}
-    />
+    <div
+      className={`w-full h-full flex flex-col items-center justify-center text-center p-2 bg-[#F0EAE1] text-[#8C827A] select-none ${
+        containerClassName || ''
+      }`}
+    >
+      <Utensils className="w-5 h-5 text-[#A89F95] mb-1" />
+      <span className="text-[10px] font-medium text-[#736B63] truncate max-w-full px-1">
+        {cleanName}
+      </span>
+    </div>
   );
 };

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { PizzeriaInfo } from '../types';
 import { getPizzeriaStatus } from '../utils/businessHours';
+import { openWhatsApp } from '../utils/whatsapp';
 
 interface HeroProps {
   pizzeria: PizzeriaInfo;
@@ -20,7 +21,7 @@ interface HeroProps {
   onOpenWhatsApp?: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({
+const HeroComponent: React.FC<HeroProps> = ({
   pizzeria,
   onNavigateCategory,
   onAssembleHalfHalf,
@@ -45,10 +46,8 @@ export const Hero: React.FC<HeroProps> = ({
     if (onOpenWhatsApp) {
       onOpenWhatsApp();
     } else {
-      const msg = encodeURIComponent(
-        `Olá! Gostaria de fazer um pedido na ${pizzeria.name}.`
-      );
-      window.open(`https://wa.me/${pizzeria.whatsappNumber}?text=${msg}`, '_blank');
+      const msg = `Olá! Gostaria de fazer um pedido na ${pizzeria.name}.`;
+      openWhatsApp(pizzeria.whatsappNumber, msg);
     }
   };
 
@@ -224,13 +223,10 @@ export const Hero: React.FC<HeroProps> = ({
                 src="/imagens/pizzas/Calabresa.png"
                 alt="Pizza Meia-a-Meia Especial La Sophia"
                 className="w-14 h-14 rounded-xl object-cover shrink-0 border border-neutral-700/80 shadow-xs"
-                loading="lazy"
+                loading="eager"
                 decoding="async"
                 width="56"
                 height="56"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/imagens/custom/calabresa.png';
-                }}
               />
               <div className="min-w-0">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#E31B23] block leading-none mb-1">
@@ -254,3 +250,6 @@ export const Hero: React.FC<HeroProps> = ({
     </section>
   );
 };
+
+export const Hero = React.memo(HeroComponent);
+

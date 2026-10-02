@@ -22,7 +22,7 @@ export function getCleanFlavorName(name: string): string {
  * Utiliza estritamente a propriedade `image` definida em menuData.ts
  */
 export function resolveCardImage(product: Product): string {
-  return product.image ? safeImageUrl(product.image) : '';
+  return product.image || '';
 }
 
 interface ProductCardProps {
@@ -34,6 +34,7 @@ interface ProductCardProps {
   isFavorite?: boolean;
   onToggleFavorite?: (product: Product) => void;
   style?: React.CSSProperties;
+  priority?: boolean;
 }
 
 const ProductCardComponent: React.FC<ProductCardProps> = ({
@@ -44,6 +45,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
   isFavorite = false,
   onToggleFavorite,
   style,
+  priority = false,
 }) => {
   const isPizza = product.isPizza || product.isSweetPizza;
   const isEsfiha = product.isEsfiha;
@@ -59,7 +61,7 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
   return (
     <div
       style={style}
-      className={`group relative bg-[#FBF9F6] hover:bg-white rounded-xl border transition-all duration-200 flex flex-col justify-between cursor-pointer w-full min-w-0 animate-fade-in-up overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] ${
+      className={`group relative bg-[#FBF9F6] hover:bg-white rounded-xl border transition-all duration-200 flex flex-col justify-between cursor-pointer w-full min-w-0 animate-fade-in-up overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] outline-none select-none ${
         isCompared
           ? 'border-[#E4171E] bg-[#FBE4E1]/30 ring-1 ring-[#E4171E]'
           : 'border-[#E8E0D5] hover:border-[#D8CEBF]'
@@ -79,6 +81,8 @@ const ProductCardComponent: React.FC<ProductCardProps> = ({
           }`}
           width="400"
           height="225"
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : 'auto'}
         />
 
         {/* 2. Tag do número do produto (ex: "Nº 14") sobreposta no canto superior esquerdo */}

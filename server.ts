@@ -18,6 +18,17 @@ async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
+  // CORS Middleware
+  app.use((_req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    if (_req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   app.use(express.json({ limit: '50mb' }));
 
   // Helper para salvar manifest de fotos customizadas
@@ -180,7 +191,7 @@ async function startServer() {
     }
   });
 
-  // Endpoint legado para salvar imagens diretamente na pasta public/imagens/pizzas
+  // Endpoint para salvar imagens diretamente nas pastas public/images e public/imagens
   app.post('/api/upload-pizza-image', (req, res) => {
     try {
       const { filename, base64Data } = req.body || {};
@@ -188,18 +199,37 @@ async function startServer() {
         return res.status(400).json({ success: false, error: 'Arquivo ou dados ausentes' });
       }
       const cleanName = path.basename(filename);
-      const publicDir = path.resolve(__dirname, 'public/imagens/pizzas');
-      const distDir = path.resolve(__dirname, 'dist/imagens/pizzas');
       const base64Clean = base64Data.replace(/^data:image\/\w+;base64,/, '');
       const buffer = Buffer.from(base64Clean, 'base64');
 
-      fs.writeFileSync(path.join(publicDir, cleanName), buffer);
-      if (fs.existsSync(distDir)) {
-        fs.writeFileSync(path.join(distDir, cleanName), buffer);
+      // Nomes a salvar: o nome original e o nome sem prefixo (ex: "13 - Bolonhesa.png" e "Bolonhesa.png")
+      const namesToSave = new Set<string>([cleanName]);
+      const unPrefixed = cleanName.replace(/^\d+\s*-\s*/, '').trim();
+      if (unPrefixed && unPrefixed !== cleanName) {
+        namesToSave.add(unPrefixed);
       }
 
-      console.log(`Imagem salva com sucesso: ${cleanName} (${buffer.length} bytes)`);
-      res.json({ success: true, size: buffer.length, filename: cleanName, path: `/imagens/pizzas/${cleanName}` });
+      const dirsToSave = [
+        path.resolve(__dirname, 'public/images'),
+        path.resolve(__dirname, 'public/imagens'),
+        path.resolve(__dirname, 'public/imagens/pizzas'),
+      ];
+
+      if (fs.existsSync(path.resolve(__dirname, 'dist'))) {
+        dirsToSave.push(path.resolve(__dirname, 'dist/images'));
+        dirsToSave.push(path.resolve(__dirname, 'dist/imagens'));
+        dirsToSave.push(path.resolve(__dirname, 'dist/imagens/pizzas'));
+      }
+
+      for (const dir of dirsToSave) {
+        fs.mkdirSync(dir, { recursive: true });
+        for (const name of namesToSave) {
+          fs.writeFileSync(path.join(dir, name), buffer);
+        }
+      }
+
+      console.log(`[Upload] Imagem salva com sucesso: ${cleanName} (${buffer.length} bytes em ${dirsToSave.length} pastas)`);
+      res.json({ success: true, size: buffer.length, filename: cleanName, path: `/images/${cleanName}` });
     } catch (err: any) {
       console.error('Erro no upload de imagem:', err);
       res.status(500).json({ success: false, error: err.message });
@@ -229,11 +259,14 @@ async function startServer() {
   const distPath = path.resolve(__dirname, 'dist');
   const distExists = fs.existsSync(distPath);
 
-  // 1. Servir explicitamente /imagens com Content-Type correto antes de qualquer middleware de SPA
+  // 1. Servir explicitamente /imagens e /images com Content-Type correto antes de qualquer middleware de SPA
   const publicImagensPath = path.resolve(__dirname, 'public/imagens');
-  app.use('/imagens', express.static(publicImagensPath, {
-    maxAge: '1h',
-    setHeaders: (res, filePath) => {
+  const publicImagesPath = path.resolve(__dirname, 'public/images');
+
+  const staticImageOptions = {
+    maxAge: '1d',
+    setHeaders: (res: express.Response, filePath: string) => {
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
       if (filePath.endsWith('.png')) {
         res.setHeader('Content-Type', 'image/png');
       } else if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
@@ -242,10 +275,31 @@ async function startServer() {
         res.setHeader('Content-Type', 'image/webp');
       }
     }
-  }));
+  };
 
-  // Bloqueio para /imagens: se não encontrou o arquivo, NUNCA cai no index.html do SPA
+  // Interceptador específico para Vila Fátima garantindo resposta direta 200 sob qualquer variação de URL
+  app.use('/images', (req, res, next) => {
+    try {
+      const decoded = decodeURIComponent(req.path);
+      if (decoded.includes('14') && (decoded.toLowerCase().includes('fatima') || decoded.toLowerCase().includes('fátima'))) {
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+        return res.sendFile(path.resolve(__dirname, 'public/images/14 - Vila Fátima.png'));
+      }
+    } catch {
+      // ignore
+    }
+    next();
+  });
+
+  app.use('/imagens', express.static(publicImagensPath, staticImageOptions));
+  app.use('/images', express.static(publicImagesPath, staticImageOptions));
+
+  // Bloqueio para /imagens e /images: se não encontrou o arquivo, NUNCA cai no index.html do SPA
   app.use('/imagens', (_req, res) => {
+    res.status(404).type('text/plain').send('Imagem não encontrada');
+  });
+  app.use('/images', (_req, res) => {
     res.status(404).type('text/plain').send('Imagem não encontrada');
   });
 

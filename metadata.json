@@ -1,6 +1,6 @@
 {
-  "name": "Forneria Di Napoli - Pedidos Online",
-  "description": "Página profissional para pedidos online e montagem de pizzas artesanais com finalização direta pelo WhatsApp.",
+  "name": "La Sophia Pizzaria e Esfiharia",
+  "description": "Cardápio completo da La Sophia Pizzaria e Esfiharia. Pizzas no forno a lenha, esfihas artesanais e pedidos online com finalização rápida via WhatsApp.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

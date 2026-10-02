@@ -885,16 +885,20 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
                       }`}
                     >
                       <div className="w-12 h-12 rounded-lg overflow-hidden bg-white shrink-0 border border-[#E8E0D5] flex items-center justify-center p-1">
-                        <img
-                          src={safeImageUrl(bev.image)}
-                          alt={bev.name}
-                          className="w-full h-full object-contain"
-                          loading="lazy"
-                          decoding="async"
-                          width="48"
-                          height="48"
-                          referrerPolicy="no-referrer"
-                        />
+                        {safeImageUrl(bev.image) ? (
+                          <img
+                            src={safeImageUrl(bev.image)}
+                            alt={bev.name}
+                            className="w-full h-full object-contain"
+                            loading="lazy"
+                            decoding="async"
+                            width="48"
+                            height="48"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <GlassWater className="w-5 h-5 text-[#A89F95]" />
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">

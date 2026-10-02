@@ -186,19 +186,23 @@ export const BeveragesUpsellModal: React.FC<BeveragesUpsellModalProps> = ({
                 >
                   {/* Thumbnail */}
                   <div className="w-14 h-14 rounded-lg overflow-hidden bg-white shrink-0 border border-[#E8E0D5] flex items-center justify-center p-1">
-                    <img
-                      src={safeImageUrl(prod.image)}
-                      alt={prod.name}
-                      className="w-full h-full object-contain"
-                      loading="lazy"
-                      decoding="async"
-                      width="56"
-                      height="56"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = 'none';
-                      }}
-                      referrerPolicy="no-referrer"
-                    />
+                    {safeImageUrl(prod.image) ? (
+                      <img
+                        src={safeImageUrl(prod.image)}
+                        alt={prod.name}
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                        decoding="async"
+                        width="56"
+                        height="56"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        }}
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <Utensils className="w-6 h-6 text-[#A89F95]" />
+                    )}
                   </div>
 
                   {/* Info */}

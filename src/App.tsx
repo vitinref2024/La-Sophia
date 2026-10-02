@@ -5,24 +5,28 @@ import { SearchBar } from './components/SearchBar';
 import { CategoryNav, PrimaryFilter } from './components/CategoryNav';
 import { ProductCard } from './components/ProductCard';
 import { LazyCategorySection } from './components/LazyCategorySection';
-import { PizzaModal, ConfiguredPizzaPayload } from './components/PizzaModal';
-import { BeveragesUpsellModal } from './components/BeveragesUpsellModal';
-import { CartDrawer } from './components/CartDrawer';
-import { CheckoutModal } from './components/CheckoutModal';
+import type { ConfiguredPizzaPayload } from './components/PizzaModal';
 import { MobileCartBar } from './components/MobileCartBar';
-import { CompareDrawer } from './components/CompareDrawer';
 import { FloatingCategoriesButton } from './components/FloatingCategoriesButton';
-import { CategoriesSheetModal } from './components/CategoriesSheetModal';
 import { Footer } from './components/Footer';
-import { FavoritesModal } from './components/FavoritesModal';
-import { RecentOrdersModal } from './components/RecentOrdersModal';
-import { MenuImporterModal } from './components/MenuImporterModal';
+
+// Code-split dynamic modals to reduce initial JavaScript payload on mobile
+const PizzaModal = React.lazy(() => import('./components/PizzaModal').then((m) => ({ default: m.PizzaModal })));
+const BeveragesUpsellModal = React.lazy(() => import('./components/BeveragesUpsellModal').then((m) => ({ default: m.BeveragesUpsellModal })));
+const CartDrawer = React.lazy(() => import('./components/CartDrawer').then((m) => ({ default: m.CartDrawer })));
+const CheckoutModal = React.lazy(() => import('./components/CheckoutModal').then((m) => ({ default: m.CheckoutModal })));
+const CompareDrawer = React.lazy(() => import('./components/CompareDrawer').then((m) => ({ default: m.CompareDrawer })));
+const CategoriesSheetModal = React.lazy(() => import('./components/CategoriesSheetModal').then((m) => ({ default: m.CategoriesSheetModal })));
+const FavoritesModal = React.lazy(() => import('./components/FavoritesModal').then((m) => ({ default: m.FavoritesModal })));
+const RecentOrdersModal = React.lazy(() => import('./components/RecentOrdersModal').then((m) => ({ default: m.RecentOrdersModal })));
+const MenuImporterModal = React.lazy(() => import('./components/MenuImporterModal').then((m) => ({ default: m.MenuImporterModal })));
 import { MENU_PRODUCTS, PIZZERIA_DEFAULT_INFO, CATEGORIES, calculateMultiFlavorPizzaPrice } from './data/menuData';
 import { CartItem, PizzeriaInfo, Product, RecentOrder } from './types';
 import { LayoutList, LayoutGrid, SearchX, AlertCircle, MessageCircle, Flame, Heart, Clock, AlertTriangle } from 'lucide-react';
 import { openWhatsApp } from './utils/whatsapp';
 import { getFavoriteIds, toggleFavoriteId, getRecentOrders, clearRecentOrders } from './utils/storage';
 import { searchProducts } from './utils/smartSearch';
+import { startBackgroundCatalogPreload } from './utils/imagePreloadManager';
 
 const CART_STORAGE_KEY = 'lasophia_cart_v2';
 const SETTINGS_STORAGE_KEY = 'lasophia_settings_v2';
@@ -159,6 +163,14 @@ export default function App() {
       console.warn('Erro ao salvar carrinho no localStorage', e);
     }
   }, [cartItems]);
+
+  // Tier 3: Pré-carregamento progressivo em segundo plano (lotes controlados sem travar a thread principal)
+  useEffect(() => {
+    const urls = products
+      .map((p) => p.image)
+      .filter((img): img is string => typeof img === 'string' && img.trim().length > 0);
+    startBackgroundCatalogPreload(urls);
+  }, [products]);
 
   // ==================== URL ROUTING & NAVIGATION ====================
   const navigateTo = (path: string, replace = false) => {
@@ -980,23 +992,25 @@ export default function App() {
       </main>
 
       {/* Compare Drawer (When comparing flavors) */}
-      <CompareDrawer
-        isOpen={isCompareOpen && comparedProducts.length > 0}
-        onClose={() => setIsCompareOpen(false)}
-        comparedProducts={comparedProducts}
-        onRemoveProduct={(id) =>
-          setComparedProducts((prev) => prev.filter((p) => p.id !== id))
-        }
-        onClearAll={() => {
-          setComparedProducts([]);
-          setIsCompareOpen(false);
-        }}
-        onSelectProduct={(prod) => {
-          setIsCompareOpen(false);
-          setSelectedProductForModal(prod);
-        }}
-        onAssembleHalfHalf={handleAssembleHalfHalf}
-      />
+      <React.Suspense fallback={null}>
+        <CompareDrawer
+          isOpen={isCompareOpen && comparedProducts.length > 0}
+          onClose={() => setIsCompareOpen(false)}
+          comparedProducts={comparedProducts}
+          onRemoveProduct={(id) =>
+            setComparedProducts((prev) => prev.filter((p) => p.id !== id))
+          }
+          onClearAll={() => {
+            setComparedProducts([]);
+            setIsCompareOpen(false);
+          }}
+          onSelectProduct={(prod) => {
+            setIsCompareOpen(false);
+            setSelectedProductForModal(prod);
+          }}
+          onAssembleHalfHalf={handleAssembleHalfHalf}
+        />
+      </React.Suspense>
 
       {/* Footer */}
       <Footer
@@ -1026,110 +1040,113 @@ export default function App() {
         hasCartItems={cartCount > 0}
       />
 
-      {/* Quick Categories Navigation Sheet Modal */}
-      <CategoriesSheetModal
-        isOpen={isCategoriesSheetOpen}
-        onClose={() => setIsCategoriesSheetOpen(false)}
-        categories={categoryOptions}
-        activeCategory={activeCategory}
-        specialFilter={specialFilter}
-        onSelectCategory={handleCategoryNavigation}
-        onSelectSpecialFilter={handleToggleSpecialFilter}
-        favoritesCount={favoriteIds.length}
-        highlightsCount={highlightsCount}
-      />
-
-      {/* STEP 1: Pizza Selection & Configuration Modal */}
-      {selectedProductForModal && (
-        <PizzaModal
-          product={selectedProductForModal}
-          allProducts={products}
-          onClose={() => setSelectedProductForModal(null)}
-          onAddToCart={handleAddPizzaToCart}
+      {/* Code-Split Modals (Loaded on demand only when opened) */}
+      <React.Suspense fallback={null}>
+        {/* Quick Categories Navigation Sheet Modal */}
+        <CategoriesSheetModal
+          isOpen={isCategoriesSheetOpen}
+          onClose={() => setIsCategoriesSheetOpen(false)}
+          categories={categoryOptions}
+          activeCategory={activeCategory}
+          specialFilter={specialFilter}
+          onSelectCategory={handleCategoryNavigation}
+          onSelectSpecialFilter={handleToggleSpecialFilter}
+          favoritesCount={favoriteIds.length}
+          highlightsCount={highlightsCount}
         />
-      )}
 
-      {/* STEP 2: Bebidas e Upsell Modal (Acompanhamentos) */}
-      <BeveragesUpsellModal
-        isOpen={isBeveragesUpsellOpen}
-        onClose={handleSkipBeveragesUpsell}
-        allProducts={products}
-        onConfirmComplements={handleConfirmBeveragesUpsell}
-        onSkip={handleSkipBeveragesUpsell}
-        pizzaName={lastConfiguredPizzaName}
-      />
+        {/* STEP 1: Pizza Selection & Configuration Modal */}
+        {selectedProductForModal && (
+          <PizzaModal
+            product={selectedProductForModal}
+            allProducts={products}
+            onClose={() => setSelectedProductForModal(null)}
+            onAddToCart={handleAddPizzaToCart}
+          />
+        )}
 
-      {/* Cart Drawer */}
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={handleCloseCart}
-        items={cartItems}
-        subtotal={cartSubtotal}
-        deliveryFee={pizzeria.deliveryFee}
-        deliveryType="entrega"
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveItem={handleRemoveItem}
-        onEditItem={handleEditItem}
-        onClearCart={handleClearCart}
-        allProducts={products}
-        onAddComplement={handleAddComplement}
-        onProceedToCheckout={handleOpenCheckout}
-      />
+        {/* STEP 2: Bebidas e Upsell Modal (Acompanhamentos) */}
+        <BeveragesUpsellModal
+          isOpen={isBeveragesUpsellOpen}
+          onClose={handleSkipBeveragesUpsell}
+          allProducts={products}
+          onConfirmComplements={handleConfirmBeveragesUpsell}
+          onSkip={handleSkipBeveragesUpsell}
+          pizzaName={lastConfiguredPizzaName}
+        />
 
-      {/* Checkout Modal */}
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={handleCloseCheckout}
-        items={cartItems}
-        subtotal={cartSubtotal}
-        pizzeria={pizzeria}
-        onOrderCompleted={handleOrderCompleted}
-        allProducts={products}
-        onAddComplement={handleAddComplement}
-      />
+        {/* Cart Drawer */}
+        <CartDrawer
+          isOpen={isCartOpen}
+          onClose={handleCloseCart}
+          items={cartItems}
+          subtotal={cartSubtotal}
+          deliveryFee={pizzeria.deliveryFee}
+          deliveryType="entrega"
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onEditItem={handleEditItem}
+          onClearCart={handleClearCart}
+          allProducts={products}
+          onAddComplement={handleAddComplement}
+          onProceedToCheckout={handleOpenCheckout}
+        />
 
-      {/* Favorites Modal */}
-      <FavoritesModal
-        isOpen={isFavoritesModalOpen}
-        onClose={handleCloseFavorites}
-        favoriteProducts={favoriteProducts}
-        onToggleFavorite={handleToggleFavorite}
-        onSelectProduct={(prod) => {
-          if (prod.uninformedPrice) {
-            setUninformedPriceItem(prod);
-            return;
-          }
-          if (prod.isPizza || prod.isSweetPizza) {
-            setSelectedProductForModal(prod);
-          } else {
-            handleAddDirectItem(prod);
-          }
-        }}
-      />
+        {/* Checkout Modal */}
+        <CheckoutModal
+          isOpen={isCheckoutOpen}
+          onClose={handleCloseCheckout}
+          items={cartItems}
+          subtotal={cartSubtotal}
+          pizzeria={pizzeria}
+          onOrderCompleted={handleOrderCompleted}
+          allProducts={products}
+          onAddComplement={handleAddComplement}
+        />
 
-      {/* Recent Orders Modal */}
-      <RecentOrdersModal
-        isOpen={isRecentOrdersModalOpen}
-        onClose={handleCloseRecentOrders}
-        orders={recentOrders}
-        onReorder={handleReorder}
-        onClearHistory={handleClearHistory}
-      />
+        {/* Favorites Modal */}
+        <FavoritesModal
+          isOpen={isFavoritesModalOpen}
+          onClose={handleCloseFavorites}
+          favoriteProducts={favoriteProducts}
+          onToggleFavorite={handleToggleFavorite}
+          onSelectProduct={(prod) => {
+            if (prod.uninformedPrice) {
+              setUninformedPriceItem(prod);
+              return;
+            }
+            if (prod.isPizza || prod.isSweetPizza) {
+              setSelectedProductForModal(prod);
+            } else {
+              handleAddDirectItem(prod);
+            }
+          }}
+        />
 
-      {/* Admin Menu Importer / Manager Modal */}
-      <MenuImporterModal
-        isOpen={isAdminOpen}
-        onClose={handleCloseAdmin}
-        products={products}
-        onSaveProducts={(updated) => {
-          setProducts(updated);
-          try {
-            localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
-          } catch (e) {
-            console.warn('Erro ao salvar produtos no localStorage', e);
-          }
-        }}
-      />
+        {/* Recent Orders Modal */}
+        <RecentOrdersModal
+          isOpen={isRecentOrdersModalOpen}
+          onClose={handleCloseRecentOrders}
+          orders={recentOrders}
+          onReorder={handleReorder}
+          onClearHistory={handleClearHistory}
+        />
+
+        {/* Admin Menu Importer / Manager Modal */}
+        <MenuImporterModal
+          isOpen={isAdminOpen}
+          onClose={handleCloseAdmin}
+          products={products}
+          onSaveProducts={(updated) => {
+            setProducts(updated);
+            try {
+              localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(updated));
+            } catch (e) {
+              console.warn('Erro ao salvar produtos no localStorage', e);
+            }
+          }}
+        />
+      </React.Suspense>
 
       {/* Modal for Uninformed Price Item (Item 12 - Beringela) */}
       {uninformedPriceItem && (

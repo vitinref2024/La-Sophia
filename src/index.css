@@ -55,6 +55,12 @@
     letter-spacing: 0.02em;
   }
 
+  /* Previne grifos, marcas amarelas e destaques de busca indesejados */
+  mark {
+    background-color: transparent !important;
+    color: inherit !important;
+  }
+
   /* Keyboard accessible visible focus */
   :focus-visible {
     outline: 2px solid #E4171E;

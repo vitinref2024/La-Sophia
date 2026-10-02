@@ -263,5 +263,20 @@ export function generateWhatsAppMessage(
 export function openWhatsApp(phone: string, message: string) {
   const cleanPhone = phone.replace(/\D/g, '');
   const encodedText = encodeURIComponent(message);
-  window.open(`https://wa.me/${cleanPhone}?text=${encodedText}`, '_blank');
+  const url = `https://wa.me/${cleanPhone}?text=${encodedText}`;
+
+  try {
+    const newWindow = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } catch {
+    window.location.href = url;
+  }
 }
