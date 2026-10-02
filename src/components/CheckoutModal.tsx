@@ -755,7 +755,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={customer.name}
                     onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
                     placeholder="Ex: João Silva"
-                    className={`w-full p-3 bg-white border rounded-xl text-xs sm:text-sm text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] shadow-xs ${
+                    className={`w-full p-3 bg-white border rounded-xl text-base sm:text-sm text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] shadow-xs ${
                       errors.name ? 'border-red-500' : 'border-[#E8E0D5]'
                     }`}
                   />
@@ -778,7 +778,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={customer.phone}
                     onChange={handlePhoneChange}
                     placeholder="(11) 99999-9999"
-                    className={`w-full p-3 bg-white border rounded-xl text-xs sm:text-sm text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] shadow-xs ${
+                    className={`w-full p-3 bg-white border rounded-xl text-base sm:text-sm text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] shadow-xs ${
                       errors.phone ? 'border-red-500' : 'border-[#E8E0D5]'
                     }`}
                   />
@@ -856,7 +856,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           onChange={handleCepChange}
                           placeholder="00000-000"
                           maxLength={9}
-                          className={`w-full p-2.5 bg-white border rounded-lg text-xs font-mono text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] ${
+                          className={`w-full p-2.5 bg-white border rounded-lg text-base sm:text-xs font-mono text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] ${
                             errors.cep ? 'border-red-500' : 'border-[#E8E0D5]'
                           }`}
                         />
@@ -928,7 +928,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={customer.street}
                         onChange={(e) => setCustomer({ ...customer, street: e.target.value })}
                         placeholder="Ex: Rua das Flores"
-                        className={`w-full p-2.5 bg-[#FBF9F6] border rounded-lg text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] ${
+                        className={`w-full p-2.5 bg-[#FBF9F6] border rounded-lg text-base sm:text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] ${
                           errors.street ? 'border-red-500' : 'border-[#E8E0D5]'
                         }`}
                       />
@@ -947,7 +947,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={customer.number}
                         onChange={(e) => setCustomer({ ...customer, number: e.target.value })}
                         placeholder="123"
-                        className={`w-full p-2.5 bg-[#FBF9F6] border rounded-lg text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] ${
+                        className={`w-full p-2.5 bg-[#FBF9F6] border rounded-lg text-base sm:text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] ${
                           errors.number ? 'border-red-500' : 'border-[#E8E0D5]'
                         }`}
                       />
@@ -972,7 +972,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           setCustomer({ ...customer, neighborhood: e.target.value })
                         }
                         placeholder="Ex: Centro"
-                        className={`w-full p-2.5 bg-[#FBF9F6] border rounded-lg text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] ${
+                        className={`w-full p-2.5 bg-[#FBF9F6] border rounded-lg text-base sm:text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] ${
                           errors.neighborhood ? 'border-red-500' : 'border-[#E8E0D5]'
                         }`}
                       />
@@ -992,7 +992,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           setCustomer({ ...customer, complement: e.target.value })
                         }
                         placeholder="Ex: Apto 42, Bloco B"
-                        className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
+                        className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-base sm:text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
                       />
                     </div>
                   </div>
@@ -1010,7 +1010,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={customer.city || 'Guarulhos'}
                         onChange={(e) => setCustomer({ ...customer, city: e.target.value })}
                         placeholder="Ex: Guarulhos"
-                        className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
+                        className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-base sm:text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
                       />
                     </div>
                     <div>
@@ -1025,7 +1025,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         onChange={(e) => setCustomer({ ...customer, state: e.target.value.toUpperCase() })}
                         placeholder="SP"
                         maxLength={2}
-                        className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
+                        className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-base sm:text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
                       />
                     </div>
                   </div>
@@ -1042,7 +1042,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         setCustomer({ ...customer, reference: e.target.value })
                       }
                       placeholder="Ex: Próximo à padaria central"
-                      className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
+                      className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-base sm:text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
                     />
                   </div>
 
@@ -1442,7 +1442,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     value={customer.changeFor}
                     onChange={(e) => setCustomer({ ...customer, changeFor: e.target.value })}
                     placeholder="Ex: R$ 100,00"
-                    className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
+                    className="w-full p-2.5 bg-[#FBF9F6] border border-[#E8E0D5] rounded-lg text-base sm:text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E]"
                   />
                   <p className="text-[11px] text-[#6B6B6B]">
                     O pagamento em dinheiro será realizado no momento da entrega ou retirada.
@@ -1490,7 +1490,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 onChange={(e) => setCustomer({ ...customer, orderNotes: e.target.value })}
                 placeholder="Ex: Tocar a campainha, talheres descartáveis, etc."
                 rows={2}
-                className="w-full p-3 bg-white border border-[#E8E0D5] rounded-xl text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] shadow-xs"
+                className="w-full p-3 bg-white border border-[#E8E0D5] rounded-xl text-base sm:text-xs text-[#1C1C1C] placeholder-[#6B6B6B] focus:outline-none focus:border-[#E4171E] shadow-xs"
               />
             </div>
 

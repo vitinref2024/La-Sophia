@@ -1097,7 +1097,7 @@ export const PizzaModal: React.FC<PizzaModalProps> = ({
         </div>
 
         {/* Footer with Quantity & Actions */}
-        <div className="p-3 sm:p-5 bg-white border-t border-[#E8E0D5] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 shadow-lg">
+        <div className="p-3 sm:p-5 bg-white border-t border-[#E8E0D5] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 shadow-lg pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           {/* Quantity Controls for the pizza */}
           <div className="flex items-center justify-between w-full sm:w-auto gap-3">
             <div className="flex items-center bg-[#F5EFE6] border border-[#E8E0D5] rounded-xl p-1 shadow-xs shrink-0">

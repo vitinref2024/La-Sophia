@@ -9,6 +9,7 @@ import type { ConfiguredPizzaPayload } from './components/PizzaModal';
 import { MobileCartBar } from './components/MobileCartBar';
 import { FloatingCategoriesButton } from './components/FloatingCategoriesButton';
 import { Footer } from './components/Footer';
+import { ToastNotification, ToastMessage } from './components/ToastNotification';
 
 // Code-split dynamic modals to reduce initial JavaScript payload on mobile
 const PizzaModal = React.lazy(() => import('./components/PizzaModal').then((m) => ({ default: m.PizzaModal })));
@@ -20,7 +21,7 @@ const CategoriesSheetModal = React.lazy(() => import('./components/CategoriesShe
 const FavoritesModal = React.lazy(() => import('./components/FavoritesModal').then((m) => ({ default: m.FavoritesModal })));
 const RecentOrdersModal = React.lazy(() => import('./components/RecentOrdersModal').then((m) => ({ default: m.RecentOrdersModal })));
 const MenuImporterModal = React.lazy(() => import('./components/MenuImporterModal').then((m) => ({ default: m.MenuImporterModal })));
-import { MENU_PRODUCTS, PIZZERIA_DEFAULT_INFO, CATEGORIES, calculateMultiFlavorPizzaPrice } from './data/menuData';
+import { MENU_PRODUCTS, PIZZERIA_DEFAULT_INFO, CATEGORIES, calculateMultiFlavorPizzaPrice, formatBRL } from './data/menuData';
 import { CartItem, PizzeriaInfo, Product, RecentOrder } from './types';
 import { LayoutList, LayoutGrid, SearchX, AlertCircle, MessageCircle, Flame, Heart, Clock, AlertTriangle } from 'lucide-react';
 import { openWhatsApp } from './utils/whatsapp';
@@ -188,6 +189,21 @@ export default function App() {
       // fallback
     }
   };
+
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+
+  const showToast = useCallback((title: string, subtitle?: string) => {
+    setToast({
+      id: `${Date.now()}_${Math.random()}`,
+      title,
+      subtitle,
+      actionText: 'Ver Carrinho',
+      onAction: () => {
+        setIsCartOpen(true);
+        navigateTo('/carrinho');
+      },
+    });
+  }, []);
 
   const handleOpenCart = () => {
     setIsCartOpen(true);
@@ -391,6 +407,10 @@ export default function App() {
 
     setCartItems((prev) => [...prev, newItem, ...beverageCartItems]);
     setSelectedProductForModal(null); // Closes customization modal directly; user remains at exact cardápio position
+    showToast(
+      `Pizza ${newItem.product.name} adicionada!`,
+      formatBRL(newItem.unitPrice * newItem.quantity)
+    );
   };
 
   // STEP 2 FINISHED: Beverages & Complements confirmed -> Add to cart & Proceed to Step 3 (Cart Drawer)
@@ -416,27 +436,57 @@ export default function App() {
     setIsCartOpen(true);
   };
 
-  // Adding single non-pizza item directly (esfihas, drinks, etc.)
+  // Adding single non-pizza item directly (esfihas, drinks, etc.) without closing or interrupting the menu
   const handleAddDirectItem = (prod: Product) => {
-    const newItem: CartItem = {
-      cartItemId: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      product: prod,
-      quantity: 1,
-      unitPrice: prod.price,
-    };
-    setCartItems((prev) => [...prev, newItem]);
-    setIsCartOpen(true);
+    setCartItems((prev) => {
+      // If exact simple product already exists in cart, increment quantity smoothly
+      const existingIdx = prev.findIndex(
+        (it) => it.product.id === prod.id && !it.size && !it.isHalfHalf && !it.crust && !it.notes
+      );
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          quantity: updated[existingIdx].quantity + 1,
+        };
+        return updated;
+      }
+      const newItem: CartItem = {
+        cartItemId: `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        product: prod,
+        quantity: 1,
+        unitPrice: prod.price,
+      };
+      return [...prev, newItem];
+    });
+
+    showToast(`1x ${prod.name} adicionado!`, formatBRL(prod.price));
   };
 
   // Adding complement (e.g. sweet esfiha from upsell) directly without closing modal or switching screens
   const handleAddComplement = (prod: Product) => {
-    const newItem: CartItem = {
-      cartItemId: `${Date.now()}_upsell_${Math.random().toString(36).substring(2, 9)}`,
-      product: prod,
-      quantity: 1,
-      unitPrice: prod.price,
-    };
-    setCartItems((prev) => [...prev, newItem]);
+    setCartItems((prev) => {
+      const existingIdx = prev.findIndex(
+        (it) => it.product.id === prod.id && !it.size && !it.isHalfHalf && !it.crust && !it.notes
+      );
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          quantity: updated[existingIdx].quantity + 1,
+        };
+        return updated;
+      }
+      const newItem: CartItem = {
+        cartItemId: `${Date.now()}_upsell_${Math.random().toString(36).substring(2, 9)}`,
+        product: prod,
+        quantity: 1,
+        unitPrice: prod.price,
+      };
+      return [...prev, newItem];
+    });
+
+    showToast(`1x ${prod.name} adicionado!`, formatBRL(prod.price));
   };
 
   const handleUpdateQuantity = (cartItemId: string, newQuantity: number) => {
@@ -1022,6 +1072,13 @@ export default function App() {
         itemCount={cartCount}
         total={cartSubtotal}
         onOpenCart={handleOpenCart}
+      />
+
+      {/* Discrete Instant Feedback Toast */}
+      <ToastNotification
+        toast={toast}
+        onClose={() => setToast(null)}
+        hasBottomCartBar={cartCount > 0}
       />
 
       {/* Discrete Floating "CATEGORIAS" Button during scrolling */}
