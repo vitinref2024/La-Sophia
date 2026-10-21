@@ -926,7 +926,7 @@ export const MENU_PRODUCTS: Product[] = [
   {
     id: 'pizza-doce-69',
     code: '69',
-    name: '69 - Banana',
+    name: 'Pizza doce de Banana Nevada',
     category: 'pizzas-doces',
     description: 'banana',
     price: 60.0,
@@ -1237,7 +1237,7 @@ export const MENU_PRODUCTS: Product[] = [
   // ==================== ESFIHAS DOCES ====================
   {
     id: 'esfiha-doce-banana',
-    name: 'Esfiha Doce de Banana',
+    name: 'Esfiha doce de Banana Nevada',
     category: 'esfihas-doces',
     description: 'banana com açúcar e canela',
     price: 13.0,

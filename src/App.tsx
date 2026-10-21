@@ -407,8 +407,11 @@ export default function App() {
 
     setCartItems((prev) => [...prev, newItem, ...beverageCartItems]);
     setSelectedProductForModal(null); // Closes customization modal directly; user remains at exact cardápio position
+    const toastTitle = newItem.product.name.toLowerCase().startsWith('pizza')
+      ? `${newItem.product.name} adicionada!`
+      : `Pizza ${newItem.product.name} adicionada!`;
     showToast(
-      `Pizza ${newItem.product.name} adicionada!`,
+      toastTitle,
       formatBRL(newItem.unitPrice * newItem.quantity)
     );
   };

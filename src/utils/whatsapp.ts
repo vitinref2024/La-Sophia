@@ -73,7 +73,8 @@ export function generateWhatsAppMessage(
       } else if (flavors.length === 2) {
         mainLine = `${item.quantity}x Pizza ${sizeTitle} — 2 sabores — ${itemTotalFormatted}`;
       } else {
-        mainLine = `${item.quantity}x Pizza ${item.product.name} — ${itemTotalFormatted}`;
+        const pizzaPrefix = item.product.name.toLowerCase().startsWith('pizza') ? '' : 'Pizza ';
+        mainLine = `${item.quantity}x ${pizzaPrefix}${item.product.name} — ${itemTotalFormatted}`;
       }
     } else {
       mainLine = `${item.quantity}x ${item.product.name} — ${itemTotalFormatted}`;
