@@ -434,7 +434,7 @@ export const MENU_PRODUCTS: Product[] = [
     code: '31',
     name: '31 - Marguerita',
     category: 'pizzas',
-    description: 'mussarela, tomate, manjericão e palmito',
+    description: 'mussarela, tomate, manjericão',
     price: 57.0,
     pricesBySize: { broto: 34.0, pizza: 57.0 },
     image: '/images/Marguerita.png?v=2',
