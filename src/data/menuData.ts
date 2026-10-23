@@ -437,7 +437,7 @@ export const MENU_PRODUCTS: Product[] = [
     description: 'mussarela, tomate, manjericão',
     price: 57.0,
     pricesBySize: { broto: 34.0, pizza: 57.0 },
-    image: '/images/Marguerita.png?v=2',
+    image: '/images/Marguerita.jpg',
     isPizza: true,
     popular: true,
     ingredients: ['mussarela', 'tomate', 'manjericão', 'palmito'],
