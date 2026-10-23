@@ -440,7 +440,7 @@ export const MENU_PRODUCTS: Product[] = [
     image: '/images/Marguerita.jpg',
     isPizza: true,
     popular: true,
-    ingredients: ['mussarela', 'tomate', 'manjericão', 'palmito'],
+    ingredients: ['mussarela', 'tomate', 'manjericão'],
   },
   {
     id: 'pizza-32',
